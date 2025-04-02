@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -7,17 +7,32 @@ import {
   Alert,
   StyleSheet,
   ScrollView,
+  TouchableOpacity,
+  Modal,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { collection, addDoc } from "firebase/firestore";
 import { db } from "../auth/firebaseConfig";
-import { useRouter } from "expo-router";
+import { useNavigation, useRouter } from "expo-router";
 import { useAuth } from "../auth/AuthContext";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function AddExpense() {
+  const navigation = useNavigation();
   const { user } = useAuth();
+  const [showPaymentOptions, setShowPaymentOptions] = useState(false);
   const router = useRouter();
+
+//   useEffect(() => {
+//     navigation.setOptions({
+//         title: "Add Expense", // Example option
+//         headerStyle: {
+//             backgroundColor: "#ff4d4d",
+//         },
+//         headerTintColor: "#fff",
+//     });
+// }, [navigation]);
 
   const [formData, setFormData] = useState({
     amount: "",
@@ -99,7 +114,7 @@ export default function AddExpense() {
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>Description</Text>
+        <Text style={styles.label}>Description (optional)</Text>
         <TextInput
           style={styles.input}
           placeholder="What was this expense for?"
@@ -110,29 +125,93 @@ export default function AddExpense() {
 
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Category</Text>
-        <Picker
-          selectedValue={formData.category}
-          onValueChange={(itemValue) => handleChange("category", itemValue)}
-          style={styles.picker}
-        >
+        <View style={styles.bubbleContainer}>
           {categories.map((cat) => (
-            <Picker.Item key={cat} label={cat} value={cat} />
+            <TouchableOpacity
+              key={cat}
+              style={[
+                styles.bubble,
+                formData.category === cat && styles.bubbleSelected,
+              ]}
+              onPress={() => handleChange("category", cat)}
+            >
+              <Ionicons
+                name={
+                  cat === "Food"
+                    ? "fast-food"
+                    : cat === "Transportation"
+                    ? "car"
+                    : cat === "Entertainment"
+                    ? "game-controller"
+                    : cat === "Utilities"
+                    ? "flash"
+                    : cat === "Shopping"
+                    ? "cart"
+                    : cat === "Healthcare"
+                    ? "medkit"
+                    : "help"
+                }
+                size={20}
+                color={formData.category === cat ? "#fff" : "#ff4d4d"}
+              />
+              <Text
+                style={[
+                  styles.bubbleText,
+                  formData.category === cat && styles.bubbleTextSelected,
+                ]}
+              >
+                {cat}
+              </Text>
+            </TouchableOpacity>
           ))}
-        </Picker>
+        </View>
+        {formData.category === "Other" && (
+          <TextInput
+            style={styles.otherInput}
+            placeholder="Enter category"
+            placeholderTextColor="#888"
+            value={formData.otherCategory}
+            onChangeText={(text) => handleChange("otherCategory", text)}
+          />
+        )}
       </View>
+
 
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Payment Method</Text>
-        <Picker
-          selectedValue={formData.paymentMethod}
-          onValueChange={(itemValue) => handleChange("paymentMethod", itemValue)}
-          style={styles.picker}
+        <TouchableOpacity
+          style={styles.dropdown}
+          onPress={() => setShowPaymentOptions(true)}
         >
-          {paymentMethods.map((method) => (
-            <Picker.Item key={method} label={method.charAt(0).toUpperCase() + method.slice(1)} value={method} />
-          ))}
-        </Picker>
+          <Text style={styles.dropdownText}>
+            {formData.paymentMethod.charAt(0).toUpperCase() + formData.paymentMethod.slice(1)}
+          </Text>
+        </TouchableOpacity>
+
+        <Modal visible={showPaymentOptions} transparent animationType="fade">
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            onPress={() => setShowPaymentOptions(false)}
+          />
+          <View style={styles.modalContainer}>
+            {paymentMethods.map((method) => (
+              <TouchableOpacity
+                key={method}
+                style={styles.modalOption}
+                onPress={() => {
+                  handleChange("paymentMethod", method);
+                  setShowPaymentOptions(false);
+                }}
+              >
+                <Text style={styles.modalOptionText}>
+                  {method.charAt(0).toUpperCase() + method.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </Modal>
       </View>
+
 
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Date</Text>
@@ -205,10 +284,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#1a1a1a",
     color: "#fff",
   },
-  picker: {
-    height: 50,
-    color: "#fff",
-  },
   datePickerContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -227,5 +302,133 @@ const styles = StyleSheet.create({
   buttonContainer: {
     margin: 20,
     borderRadius: 8,
+  },
+  inputGroup: {
+    marginBottom: 15,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#ff4d4d",
+    marginBottom: 5,
+  },
+  bubbleContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  bubble: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "#ff4d4d",
+    borderRadius: 20,
+    backgroundColor: "#1a1a1a",
+    marginBottom: 10,
+  },
+  bubbleSelected: {
+    backgroundColor: "#ff4d4d",
+  },
+  bubbleText: {
+    marginLeft: 5,
+    fontSize: 16,
+    color: "#ff4d4d",
+  },
+  bubbleTextSelected: {
+    color: "#fff",
+  },
+  otherCategory: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#ff4d4d",
+    marginBottom: 10,
+    backgroundColor: "#262626",
+  },
+  otherInput: {
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: "#ff4d4d",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 16,
+    backgroundColor: "#1a1a1a",
+    color: "#fff",
+  },
+  paymentMethodContainer: {
+    padding: 10,
+    backgroundColor: "#1a1a1a",
+    borderWidth: 1,
+    borderColor: "#ff4d4d",
+    borderRadius: 10,
+  },
+  paymentOption: {
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderBottomWidth: 1,
+    borderColor: "#ff4d4d",
+  },
+  paymentOptionText: {
+    fontSize: 16,
+    color: "#ff4d4d",
+  },
+  paymentOptionSelected: {
+    backgroundColor: "#ff4d4d",
+  },
+  paymentOptionTextSelected: {
+    color: "#fff",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContainer: {
+    backgroundColor: "#1a1a1a",
+    padding: 20,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#ff4d4d",
+    width: "80%",
+  },
+  closeModalButton: {
+    marginTop: 10,
+    backgroundColor: "#ff4d4d",
+    paddingVertical: 10,
+    borderRadius: 5,
+    alignItems: "center",
+  },
+  closeModalText: {
+    color: "#fff",
+    fontSize: 16,
+  },
+  dropdown: {
+    borderWidth: 1,
+    borderColor: "#ff4d4d",
+    padding: 10,
+    borderRadius: 8,
+    backgroundColor: "#1a1a1a",
+    marginTop: 8,
+
+  },
+  dropdownText: {
+    fontSize: 16,
+    color: "#fff",
+  },
+  modalOption: {
+    paddingVertical: 9,
+    paddingHorizontal: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ff4d4d",
+  },
+  modalOptionText: {
+    fontSize: 16,
+    color: "#fff",
   },
 });

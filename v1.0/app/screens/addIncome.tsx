@@ -1,37 +1,49 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, Button, Alert, StyleSheet, ScrollView } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { collection, addDoc } from 'firebase/firestore';
-import { db } from '../auth/firebaseConfig';
-import { useRouter } from 'expo-router';
-import { useAuth } from '../auth/AuthContext';
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  Button,
+  Alert,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+} from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { collection, addDoc } from "firebase/firestore";
+import { db } from "../auth/firebaseConfig";
+import { useRouter } from "expo-router";
+import { useAuth } from "../auth/AuthContext";
 
 export default function AddIncome() {
   const { user } = useAuth();
   const router = useRouter();
 
   const [formData, setFormData] = useState({
-    amount: '',
-    description: '',
-    category: 'Salary',
-    paymentMethod: 'bank',
-    accountId: '',
+    amount: "",
+    description: "",
+    category: "Salary",
+    paymentMethod: "bank",
     date: new Date(),
   });
 
   const [loading, setLoading] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
-  const categories = ['Salary', 'Business', 'Investments', 'Freelance', 'Gift', 'Other'];
-  const paymentMethods = ['bank', 'cash', 'cheque', 'online', 'other'];
+  const categories = [
+    "Salary",
+    "Business",
+    "Investments",
+    "Freelance",
+    "Gift",
+    "Other",
+  ];
+  const paymentMethods = ["bank", "cash", "cheque", "online", "other"];
 
-  // Handle Input Change
   const handleChange = (name, value) => {
     setFormData({ ...formData, [name]: value });
   };
 
-  // Handle Form Submission
   const handleSubmit = async () => {
     if (!user || !user.uid) {
       Alert.alert("Error", "User not authenticated");
@@ -39,7 +51,7 @@ export default function AddIncome() {
     }
 
     if (!formData.amount || isNaN(parseFloat(formData.amount))) {
-      Alert.alert('Error', 'Please enter a valid amount');
+      Alert.alert("Error", "Please enter a valid amount");
       return;
     }
 
@@ -50,17 +62,15 @@ export default function AddIncome() {
         description: formData.description,
         category: formData.category,
         paymentMethod: formData.paymentMethod,
-        accountId: formData.accountId,
         date: formData.date,
         transactionType: "income",
         createdAt: new Date(),
       });
-
-      Alert.alert('Success', 'Income added successfully');
+      Alert.alert("Success", "Income added successfully");
       router.back();
     } catch (error) {
-      console.error('Error adding income:', error);
-      Alert.alert('Error', 'Failed to add income');
+      console.error("Error adding income:", error);
+      Alert.alert("Error", "Failed to add income");
     } finally {
       setLoading(false);
     }
@@ -77,52 +87,77 @@ export default function AddIncome() {
           placeholder="00.00"
           keyboardType="numeric"
           value={formData.amount}
-          onChangeText={(text) => handleChange('amount', text)}
+          onChangeText={(text) => handleChange("amount", text)}
         />
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>Description</Text>
+        <Text style={styles.label}>Description (optional)</Text>
         <TextInput
           style={styles.input}
-          placeholder="Source or reason for income"
+          placeholder="What was this expense for?"
           value={formData.description}
-          onChangeText={(text) => handleChange('description', text)}
+          onChangeText={(text) => handleChange("description", text)}
         />
       </View>
 
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Category</Text>
-        <Picker
-          selectedValue={formData.category}
-          onValueChange={(itemValue) => handleChange('category', itemValue)}
-          style={styles.picker}
-        >
+        <View style={styles.bubbleContainer}>
           {categories.map((cat) => (
-            <Picker.Item key={cat} label={cat} value={cat} />
+            <TouchableOpacity
+              key={cat}
+              style={[
+                styles.bubble,
+                formData.category === cat && styles.bubbleSelected,
+              ]}
+              onPress={() => handleChange("category", cat)}
+            >
+              <Text style={styles.bubbleText}>{cat}</Text>
+            </TouchableOpacity>
           ))}
-        </Picker>
+        </View>
+        {formData.category === "Other" && (
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter category"
+                    placeholderTextColor="#888"
+                    value={formData.otherCategory}
+                    onChangeText={(text) => handleChange("otherCategory", text)}
+                  />
+        )}
       </View>
 
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Payment Method</Text>
-        <Picker
-          selectedValue={formData.paymentMethod}
-          onValueChange={(itemValue) => handleChange('paymentMethod', itemValue)}
-          style={styles.picker}
-        >
+        <View style={styles.bubbleContainer}>
           {paymentMethods.map((method) => (
-            <Picker.Item key={method} label={method.charAt(0).toUpperCase() + method.slice(1)} value={method} />
+            <TouchableOpacity
+              key={method}
+              style={[
+                styles.bubble,
+                formData.paymentMethod === method && styles.bubbleSelected,
+              ]}
+              onPress={() => handleChange("paymentMethod", method)}
+            >
+              <Text style={styles.bubbleText}>
+                {method.charAt(0).toUpperCase() + method.slice(1)}
+              </Text>
+            </TouchableOpacity>
           ))}
-        </Picker>
+        </View>
       </View>
 
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Date</Text>
-        <View style={styles.datePickerContainer}>
-          <Text style={styles.dateText}>{formData.date.toLocaleDateString()}</Text>
-          <Button title="Select Date" onPress={() => setShowDatePicker(true)} color="#ff4d4d" />
-        </View>
+        <TouchableOpacity
+          onPress={() => setShowDatePicker(true)}
+          style={styles.dateButton}
+        >
+          <Text style={styles.dateText}>
+            {formData.date.toLocaleDateString()}
+          </Text>
+        </TouchableOpacity>
         {showDatePicker && (
           <DateTimePicker
             value={formData.date}
@@ -131,7 +166,7 @@ export default function AddIncome() {
             onChange={(event, selectedDate) => {
               setShowDatePicker(false);
               if (event.type !== "dismissed") {
-                handleChange('date', selectedDate || formData.date);
+                handleChange("date", selectedDate || formData.date);
               }
             }}
           />
@@ -150,60 +185,36 @@ export default function AddIncome() {
   );
 }
 
-// STYLES
 const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    paddingBottom: 40,
-    backgroundColor: "#000",
-  },
+  container: { padding: 20, backgroundColor: "#000" },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
+    fontWeight: "bold",
+    textAlign: "center",
     color: "#ff4d4d",
   },
-  inputGroup: {
-    marginBottom: 15,
-  },
-  label: {
-    fontSize: 16,
-    marginBottom: 5,
-    fontWeight: '500',
-    color: "#ff4d4d",
-  },
+  inputGroup: { marginBottom: 15 },
+  label: { fontSize: 16, fontWeight: "500", color: "#ff4d4d" },
   input: {
     height: 50,
     borderWidth: 1,
-    borderColor: '#ff4d4d',
-    borderRadius: 8,
-    paddingHorizontal: 15,
-    fontSize: 16,
-    backgroundColor: "#1a1a1a",
-    color: "#fff",
-  },
-  picker: {
-    height: 50,
-    color: "#fff",
-  },
-  datePickerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderWidth: 1,
     borderColor: "#ff4d4d",
     borderRadius: 8,
-    paddingHorizontal: 10,
-    height: 50,
-    backgroundColor: "#1a1a1a",
-  },
-  dateText: {
+    paddingHorizontal: 15,
     color: "#fff",
-    fontSize: 16,
   },
-  buttonContainer: {
-    margin: 20,
-    borderRadius: 8,
+  bubbleContainer: { flexDirection: "row", flexWrap: "wrap" },
+  bubble: {
+    padding: 10,
+    margin: 5,
+    borderRadius: 20,
+    backgroundColor: "#1a1a1a",
+    borderColor: "#ff4d4d",
+    borderWidth: 1,
   },
+  bubbleSelected: { backgroundColor: "#ff4d4d" },
+  bubbleText: { color: "#fff", fontWeight: "500" },
+  dateButton: { padding: 10, backgroundColor: "#1a1a1a", borderRadius: 8 },
+  dateText: { color: "#fff" },
+  buttonContainer: { marginTop: 20 },
 });

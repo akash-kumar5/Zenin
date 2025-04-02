@@ -47,6 +47,7 @@ function AppContent({ colorScheme, loaded }) {
           <>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="+not-found" />
+            <Stack.Screen name="/screens/addExpense" />
           </>
         ) : (
           <Stack.Screen name="auth/login" options={{ headerShown: false }} />
