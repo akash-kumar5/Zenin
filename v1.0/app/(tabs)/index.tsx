@@ -121,7 +121,7 @@ export default function HomeScreen() {
       {/* Goals & Tips */}
       <View style={styles.section}>
         <Text style={styles.heading}>Goals & Tips</Text>
-        {goals.map((goal, index) => (
+        {goals?.map((goal, index) => (
           <View key={index} style={{ marginBottom: 10 }}>
             <Text style={styles.subHeading}>{goal.name}</Text>
             <Progress.Bar progress={10} width={200} color="#e74c3c" />
@@ -133,8 +133,8 @@ export default function HomeScreen() {
       <View style={styles.section}>
         <Text style={styles.heading}>Quick Actions</Text>
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <Button title="Add Income" color="#27ae60" onPress={() => {}} />
-          <Button title="Add Expense" color="#e74c3c" onPress={() => {}} />
+          <Button title="Add Income" color="#27ae60" onPress={() => {router.push("/screens/addIncome")}} />
+          <Button title="Add Expense" color="#e74c3c" onPress={() => {router.push("/screens/addExpense")}} />
         </View>
       </View>
 

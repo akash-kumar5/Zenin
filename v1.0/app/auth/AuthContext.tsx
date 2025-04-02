@@ -22,7 +22,7 @@ export const AuthProvider = ({ children }) => {
         setUser(token);
         router.replace("/");
       } else {
-        router.replace("../screens/login");
+        router.replace("../auth/login");
       }
       setLoading(false);
     };
@@ -39,7 +39,7 @@ export const AuthProvider = ({ children }) => {
         router.replace("/");
       } else {
         setUser(null);
-        router.replace("../screens/login");
+        router.replace("../auth/login");
       }
       setLoading(false)
     });
@@ -85,7 +85,7 @@ const signup = async (email, password) => {
     await signOut(auth);
     await AsyncStorage.removeItem("authToken");
     setUser(null);
-    router.replace("/screens/login");
+    router.replace("/auth/login");
     setLoading(false)
   };
 

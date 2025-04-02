@@ -36,7 +36,7 @@ function AppContent({ colorScheme, loaded }) {
   useEffect(() => {
     setIsReady(true);
     if (!user) {
-      router.replace("/screens/login"); // Redirect to login if not authenticated
+      router.replace("/auth/login"); // Redirect to login if not authenticated
     }
   }, [user]);
 

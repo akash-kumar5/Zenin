@@ -1,0 +1,139 @@
+## Main Collections Structure
+
+### 1. `users` (Main Collection)
+- **Document ID**: User's UID (from Firebase Auth)
+- **Fields**:
+  - `personalInfo` (map)
+    - `firstName`
+    - `lastName`
+    - `email`
+    - `phone`
+    - `profileImageUrl`
+    - `currencyPreference` (e.g., "USD", "EUR")
+  - `settings` (map)
+    - `theme` (light/dark)
+    - `notificationPreferences`
+    - `defaultAccount`
+  - `createdAt` (timestamp)
+  - `lastLogin` (timestamp)
+
+### 2. `accounts` (Subcollection under each user document)
+- **Document ID**: Auto-generated
+- **Fields**:
+  - `accountName` (e.g., "Chase Checking", "Wallet Cash")
+  - `accountType` (enum: "checking", "savings", "credit", "cash", "investment")
+  - `bankName` (optional for bank accounts)
+  - `accountNumber` (optional, last 4 digits only for security)
+  - `currentBalance` (number)
+  - `initialBalance` (number)
+  - `createdAt` (timestamp)
+  - `updatedAt` (timestamp)
+  - `isActive` (boolean)
+
+### 3. `transactions` (Subcollection under each user document)
+- **Document ID**: Auto-generated
+- **Fields**:
+  - `amount` (number, positive for income, negative for expense)
+  - `description`
+  - `category` (e.g., "Food", "Salary", "Transportation")
+  - `paymentMethod` (enum: "cash", "credit", "debit", "transfer", "other")
+  - `accountId` (reference to the account document)
+  - `transactionType` (enum: "income", "expense", "transfer")
+  - `date` (timestamp)
+  - `createdAt` (timestamp)
+  - `recurring` (map, optional)
+    - `isRecurring` (boolean)
+    - `frequency` (e.g., "weekly", "monthly")
+    - `endDate` (timestamp, optional)
+  - `tags` (array of strings, optional)
+  - `receiptImageUrl` (optional)
+
+### 4. `categories` (Subcollection under each user document)
+- **Document ID**: Auto-generated or predefined names
+- **Fields**:
+  - `name` (e.g., "Groceries", "Entertainment")
+  - `type` ("income" or "expense")
+  - `icon` (string representing icon)
+  - `color` (hex code)
+  - `budget` (optional number)
+  - `isDefault` (boolean)
+
+### 5. `investments` (Subcollection under each user document)
+- **Document ID**: Auto-generated
+- **Fields**:
+  - `name` (e.g., "Apple Stocks", "401k")
+  - `type` (e.g., "stock", "mutual fund", "retirement", "crypto")
+  - `currentValue` (number)
+  - `initialInvestment` (number)
+  - `purchaseDate` (timestamp)
+  - `quantity` (number)
+  - `symbol` (optional, for stocks/crypto)
+  - `performance` (map)
+    - `ytdReturn` (number)
+    - `totalReturn` (number)
+  - `updatedAt` (timestamp)
+
+### 6. `budgets` (Subcollection under each user document)
+- **Document ID**: Auto-generated
+- **Fields**:
+  - `categoryId` (reference to category)
+  - `amount` (number)
+  - `period` (e.g., "monthly", "weekly")
+  - `startDate` (timestamp)
+  - `endDate` (timestamp, optional)
+  - `currentSpending` (number, calculated field)
+
+### 7. `goals` (Subcollection under each user document)
+- **Document ID**: Auto-generated
+- **Fields**:
+  - `name` (e.g., "New Car", "Vacation")
+  - `targetAmount` (number)
+  - `currentAmount` (number)
+  - `targetDate` (timestamp)
+  - `priority` (enum: "low", "medium", "high")
+  - `associatedAccount` (reference to account, optional)
+  - `createdAt` (timestamp)
+
+## Security Rules Example
+
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users can only read/write their own user document
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Users can only access their own subcollections
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
+```
+
+## Important Considerations
+
+1. **Data Relationships**:
+   - Use references (`accountId`) to link transactions to accounts
+   - Keep user-specific data in subcollections under their user document
+
+2. **Data Validation**:
+   - Implement client-side validation before writing to Firestore
+   - Consider Cloud Functions for complex validation
+
+3. **Calculated Fields**:
+   - For frequently accessed calculated data (like account balances), consider:
+     - Updating them in transactions with Cloud Functions triggers
+     - Or calculating them client-side when needed
+
+4. **Performance**:
+   - For large transaction histories, consider adding composite indexes
+   - Implement pagination for transaction lists
+
+5. **Backup Strategy**:
+   - Implement regular exports of your Firestore data
+   - Consider Cloud Functions to backup important data to Cloud Storage
+
+Would you like me to elaborate on any specific part of this structure or provide sample code for implementing any of these collections?
