@@ -11,6 +11,8 @@ import { StatusBar } from "expo-status-bar";
 import { Stack, Slot, router } from "expo-router";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { AuthProvider, useAuth } from "./auth/AuthContext";
+import TransactionDetails from "./screens/transactionDetails";
+import TransactionsScreen from "./(tabs)/transactions";
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -48,6 +50,9 @@ function AppContent({ colorScheme, loaded }) {
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="+not-found" />
             <Stack.Screen name="/screens/addExpense" />
+            <Stack.Screen name="TransactionScreen" component={TransactionsScreen} />
+            <Stack.Screen name="TransactionDetails" component={TransactionDetails} />
+
           </>
         ) : (
           <Stack.Screen name="auth/login" options={{ headerShown: false }} />
