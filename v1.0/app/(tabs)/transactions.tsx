@@ -14,8 +14,7 @@ import { useAuth } from "../auth/AuthContext";
 import { collection, getFirestore, onSnapshot } from "firebase/firestore";
 import { format } from "date-fns";
 import transactionStyle from "@/styles/transactionStyle";
-import { useNavigation, useRouter } from "expo-router";
-import { useRoute } from "@react-navigation/native";
+import { useRouter } from "expo-router";
 
 const TransactionsScreen = () => {
   const [transactions, setTransactions] = useState([]);
@@ -24,7 +23,6 @@ const TransactionsScreen = () => {
   const [activeFilter, setActiveFilter] = useState("All");
   const [sortOption, setSortOption] = useState("dateDesc");
   const [sortModalVisible, setSortModalVisible] = useState(false);
-  const navigation = useNavigation();
   const router = useRouter();
 
   const { user } = useAuth();
@@ -134,22 +132,40 @@ const TransactionsScreen = () => {
 
   const SortingModal = () => (
     <Modal
-      transparent={true}
-      animationType="slide"
+      transparent
+      animationType="fade"
       visible={sortModalVisible}
       onRequestClose={() => setSortModalVisible(false)}
     >
-      <View style={transactionStyle.modalContainer}>
+      <Pressable 
+        style={transactionStyle.modalBackdrop} 
+        onPress={() => setSortModalVisible(false)} // Close on outside press
+      >
         <View style={transactionStyle.modalContent}>
-          {["dateDesc", "dateAsc", "amountDesc", "amountAsc"].map((option) => (
-            <Pressable key={option} onPress={() => setSortOption(option)}>
-              <Text>{option}</Text>
-            </Pressable>
-          ))}
+          <Text style={transactionStyle.modalTitle}>Sort By</Text>
+          {["Newest First (Default)", "Oldest First", "Highest Amount", "Lowest Amount"].map((label, index) => {
+            const value = ["dateDesc", "dateAsc", "amountDesc", "amountAsc"][index];
+            return (
+              <Pressable 
+                key={value} 
+                style={({ pressed }) => [
+                  transactionStyle.option,
+                  pressed && transactionStyle.optionPressed
+                ]}
+                onPress={() => {
+                  setSortOption(value);
+                  setSortModalVisible(false);
+                }}
+              >
+                <Text style={transactionStyle.optionText}>{label}</Text>
+              </Pressable>
+            );
+          })}
         </View>
-      </View>
+      </Pressable>
     </Modal>
   );
+  
 
   if (loading) {
     return (
