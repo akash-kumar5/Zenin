@@ -2,7 +2,6 @@ import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
-  ScrollView,
   TouchableOpacity,
   ActivityIndicator,
   FlatList,
@@ -35,7 +34,6 @@ const TransactionsScreen = () => {
     });
   };
 
-  // Fetch Transactions
   useEffect(() => {
     if (!user) return;
     const unsubscribe = onSnapshot(
@@ -56,34 +54,26 @@ const TransactionsScreen = () => {
     return () => unsubscribe();
   }, [user]);
 
-  // Sorting Transactions
   useEffect(() => {
-    let sortedTransactions = [...transactions];
-    if (sortOption === "dateDesc") {
-      sortedTransactions.sort((a, b) => b.date.seconds - a.date.seconds);
-    } else if (sortOption === "dateAsc") {
-      sortedTransactions.sort((a, b) => a.date.seconds - b.date.seconds);
-    } else if (sortOption === "amountDesc") {
-      sortedTransactions.sort((a, b) => b.amount - a.amount);
-    } else if (sortOption === "amountAsc") {
-      sortedTransactions.sort((a, b) => a.amount - b.amount);
-    }
-    setFilteredTransactions(sortedTransactions);
+    let sorted = [...transactions];
+    if (sortOption === "dateDesc") sorted.sort((a, b) => b.date.seconds - a.date.seconds);
+    else if (sortOption === "dateAsc") sorted.sort((a, b) => a.date.seconds - b.date.seconds);
+    else if (sortOption === "amountDesc") sorted.sort((a, b) => b.amount - a.amount);
+    else if (sortOption === "amountAsc") sorted.sort((a, b) => a.amount - b.amount);
+    setFilteredTransactions(sorted);
   }, [sortOption, transactions]);
 
-  // Filtering Transactions
   useEffect(() => {
-    const filterOptions = {
+    const filterMap = {
       All: () => transactions,
-      Income: () => transactions.filter((t) => t.transactionType === "income"),
-      Expenses: () => transactions.filter((t) => t.transactionType === "expense"),
+      Income: () => transactions.filter(t => t.transactionType === "income"),
+      Expenses: () => transactions.filter(t => t.transactionType === "expense"),
       "This Month": () =>
         transactions.filter(
-          (t) =>
-            new Date(t.date.seconds * 1000).getMonth() === new Date().getMonth()
+          (t) => new Date(t.date.seconds * 1000).getMonth() === new Date().getMonth()
         ),
     };
-    setFilteredTransactions(filterOptions[activeFilter]());
+    setFilteredTransactions(filterMap[activeFilter]());
   }, [activeFilter, transactions]);
 
   const formatTimestamp = (timestamp) => {
@@ -91,16 +81,9 @@ const TransactionsScreen = () => {
     return date ? format(date, "dd MMM yyyy, HH:mm") : "Invalid date";
   };
 
-  // Transaction Summary
   const calculateSummary = useCallback(() => {
-    const income = transactions
-      .filter((t) => t.transactionType === "income")
-      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
-    const expenses = transactions
-      .filter((t) => t.transactionType === "expense")
-      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
+    const income = transactions.filter((t) => t.transactionType === "income").reduce((sum, t) => sum + parseFloat(t.amount), 0);
+    const expenses = transactions.filter((t) => t.transactionType === "expense").reduce((sum, t) => sum + parseFloat(t.amount), 0);
     return { income, expenses, balance: income + expenses };
   }, [transactions]);
 
@@ -109,24 +92,36 @@ const TransactionsScreen = () => {
   const renderTransaction = ({ item }) => (
     <TouchableOpacity onPress={() => handlePress(item)}>
       <View style={transactionStyle.transaction}>
-      <Ionicons
-        name="cart"
-        size={24}
-        color={item.transactionType === "income" ? "#2ecc71" : "#e74c3c"}
-      />
-      <View style={transactionStyle.transactionDetails}>
-        <Text style={transactionStyle.transactionTitle}>{item.category}</Text>
-        <Text style={transactionStyle.transactionDate}>{formatTimestamp(item.date)}</Text>
+        <Ionicons
+          name="cart"
+          size={24}
+          color={item.transactionType === "income" ? "#2ecc71" : "#e74c3c"}
+        />
+        <View style={transactionStyle.transactionDetails}>
+          <Text style={transactionStyle.transactionTitle}>{item.category}</Text>
+          <Text style={transactionStyle.transactionDate}>{formatTimestamp(item.date)}</Text>
+        </View>
+        <Text
+          style={[
+            transactionStyle.transactionAmount,
+            { color: item.transactionType === "income" ? "#2ecc71" : "#e74c3c" },
+          ]}
+        >
+          ₹{item.amount}
+        </Text>
       </View>
-      <Text
-        style={[
-          transactionStyle.transactionAmount,
-          { color: item.transactionType === "income" ? "#2ecc71" : "#e74c3c" },
-        ]}
-      >
-        ₹{item.amount}
-      </Text>
-    </View>
+    </TouchableOpacity>
+  );
+
+  const renderFilter = ({ item }) => (
+    <TouchableOpacity
+      style={[
+        transactionStyle.filterButton,
+        activeFilter === item && transactionStyle.activeFilter,
+      ]}
+      onPress={() => setActiveFilter(item)}
+    >
+      <Text style={transactionStyle.filterText}>{item}</Text>
     </TouchableOpacity>
   );
 
@@ -137,20 +132,20 @@ const TransactionsScreen = () => {
       visible={sortModalVisible}
       onRequestClose={() => setSortModalVisible(false)}
     >
-      <Pressable 
-        style={transactionStyle.modalBackdrop} 
-        onPress={() => setSortModalVisible(false)} // Close on outside press
+      <Pressable
+        style={transactionStyle.modalBackdrop}
+        onPress={() => setSortModalVisible(false)}
       >
         <View style={transactionStyle.modalContent}>
           <Text style={transactionStyle.modalTitle}>Sort By</Text>
           {["Newest First (Default)", "Oldest First", "Highest Amount", "Lowest Amount"].map((label, index) => {
             const value = ["dateDesc", "dateAsc", "amountDesc", "amountAsc"][index];
             return (
-              <Pressable 
-                key={value} 
+              <Pressable
+                key={value}
                 style={({ pressed }) => [
                   transactionStyle.option,
-                  pressed && transactionStyle.optionPressed
+                  pressed && transactionStyle.optionPressed,
                 ]}
                 onPress={() => {
                   setSortOption(value);
@@ -165,7 +160,6 @@ const TransactionsScreen = () => {
       </Pressable>
     </Modal>
   );
-  
 
   if (loading) {
     return (
@@ -176,7 +170,7 @@ const TransactionsScreen = () => {
   }
 
   return (
-    <ScrollView style={transactionStyle.container}>
+    <View style={transactionStyle.container}>
       <View style={[transactionStyle.summarySection, transactionStyle.elevatedCard]}>
         <Text style={transactionStyle.heading}>Transaction Summary</Text>
         <View style={transactionStyle.summaryRow}>
@@ -200,36 +194,36 @@ const TransactionsScreen = () => {
       <View style={[transactionStyle.section, transactionStyle.elevatedCard]}>
         <View style={transactionStyle.header}>
           <Text style={transactionStyle.heading}>
-            All Transactions
-            <MaterialIcons name="history" size={20} color="#e74c3c" />
+            All Transactions <MaterialIcons name="history" size={20} color="#e74c3c" />
           </Text>
           <TouchableOpacity onPress={() => setSortModalVisible(true)}>
             <MaterialIcons name="sort" size={24} color="#e74c3c" />
           </TouchableOpacity>
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {["All", "Income", "Expenses", "This Month"].map((filter) => (
-            <TouchableOpacity
-              key={filter}
-              style={[
-                transactionStyle.filterButton,
-                activeFilter === filter && transactionStyle.activeFilter,
-              ]}
-              onPress={() => setActiveFilter(filter)}
-            >
-              <Text style={transactionStyle.filterText}>{filter}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+
+        <FlatList
+          data={["All", "Income", "Expenses", "This Month"]}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(item) => item}
+          renderItem={renderFilter}
+          contentContainerStyle={{ paddingVertical: 8 }}
+          style={{ maxHeight: 47 }} 
+        />
+
         <FlatList
           data={filteredTransactions}
           renderItem={renderTransaction}
           keyExtractor={(item) => item.id}
-          ListEmptyComponent={<Text>No transactions found</Text>}
+          ListEmptyComponent={
+            <Text style={{ textAlign: "center", marginTop: 20 }}>No transactions found</Text>
+          }
+          style={{ flex: 1 }} // LET IT TAKE SPACE
+          showsVerticalScrollIndicator={false}
         />
       </View>
       <SortingModal />
-    </ScrollView>
+    </View>
   );
 };
 

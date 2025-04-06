@@ -38,7 +38,6 @@ const transactionStyle = StyleSheet.create({
     fontSize: 16,
     color:"#fff"
   },
-
   activeFilter: {
     backgroundColor: "#e74c3c",
     color: "#1e1e1e",
@@ -46,7 +45,6 @@ const transactionStyle = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#121212",
-    padding: 16,
   },
   elevatedCard: {
     backgroundColor: "#1e1e1e",
@@ -61,6 +59,7 @@ const transactionStyle = StyleSheet.create({
   summarySection: {
     marginBottom: 24,
     padding: 16,
+    flexShrink:0
   },
   summaryRow: {
     flexDirection: "row",
@@ -82,6 +81,7 @@ const transactionStyle = StyleSheet.create({
   section: {
     marginBottom: 24,
     padding: 16,
+    flex:1
   },
   header: {
     flexDirection: "row",
@@ -142,15 +142,6 @@ const transactionStyle = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "rgba(0, 0, 0, 0.5)",
-  },
-
-  modalContent: {
-    width: "80%",
-    color: "#e74c33",
-    padding: 20,
-    backgroundColor: "#1e1e1e",
-    borderRadius: 10,
-    elevation: 5,
   },
 });
 

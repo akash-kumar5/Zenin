@@ -16,6 +16,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../auth/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import { useIsFocused } from "@react-navigation/native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function TransactionDetails() {
   const { transaction } = useLocalSearchParams(); // Getting transaction details
@@ -99,7 +100,7 @@ export default function TransactionDetails() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <Text style={styles.heading}>Transaction Details</Text>
       <View style={styles.elevatedCard}>
         <View style={styles.detailRow}>
@@ -188,7 +189,7 @@ export default function TransactionDetails() {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -197,6 +198,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     backgroundColor: "#121212", // Black background
+    
   },
   elevatedCard: {
     backgroundColor: "#1e1e1e",

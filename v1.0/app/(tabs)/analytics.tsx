@@ -2,237 +2,217 @@ import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
-  TouchableOpacity,
+  RefreshControl,
+  Dimensions,
 } from "react-native";
-
 import { BarChart, LineChart, PieChart } from "react-native-chart-kit";
-import { Dimensions } from "react-native";
-import { collection, getDocs, query, QuerySnapshot } from "firebase/firestore";
+import { collection, getDocs, query } from "firebase/firestore";
 import { db } from "../auth/firebaseConfig";
 import { useAuth } from "../auth/AuthContext";
+import styles from "@/styles/analyticsStyle";
 
 const screenWidth = Dimensions.get("window").width;
 
 export default function Analytics() {
   const [transactions, setTransactions] = useState([]);
-  const [categoryTotals, setCategoryTotals] = useState<Record<string, number>>(
-    {}
-  );
+  const [categoryTotals, setCategoryTotals] = useState({});
   const [monthlyTotals, setMonthlyTotals] = useState({});
   const [income, setIncome] = useState([]);
   const [expenses, setExpenses] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
-    const fetchTransactions = async () => {
-      try {
-        if (!user) return;
+    if (user) fetchTransactions();
+  }, [user]);
 
-        const q = query(collection(db, `users/${user.uid}/transactions`));
-        const querySnapshot = await getDocs(q);
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchTransactions();
+    setRefreshing(false);
+  };
 
-        let data = [];
-        querySnapshot.forEach((doc) => {
-          data.push({ id: doc.id, ...doc.data() });
-        });
-        setTransactions(data);
-        processData(data);
-      } catch (error) {
-        console.error("Error fetching transactions:", error);
-      }
-    };
+  const fetchTransactions = async () => {
+    try {
+      const q = query(collection(db, `users/${user.uid}/transactions`));
+      const querySnapshot = await getDocs(q);
 
-    console.log(transactions);
+      const data = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
 
-    fetchTransactions();
-  }, []);
+      setTransactions(data);
+      processData(data);
+    } catch (error) {
+      console.error("Error fetching transactions:", error);
+    }
+  };
 
   const processData = (transactions) => {
-    let categories = {};
-    let months = {};
-    let incomeData = [];
-    let expenseData = [];
-  
-    transactions.forEach(({ amount, category, type, date }) => {
-      if (!amount || isNaN(amount)) return; // Avoid NaN values
-  
-      const month = new Date(date).toLocaleString("default", { month: "short" });
-  
-      months[month] = (months[month] || 0) + amount;
-  
-      if (type === "income") {
-        incomeData.push(amount);
+    const categories = {};
+    const incomeByMonth = {};
+    const expenseByMonth = {};
+    const allMonths = new Set();
+
+    transactions.forEach(({ amount, category, transactionType, date }) => {
+      if (!amount || isNaN(amount)) return;
+
+      const parsedAmount =
+        typeof amount === "string" ? parseFloat(amount) : amount;
+
+      const jsDate = date?.seconds
+        ? new Date(date.seconds * 1000)
+        : new Date(date);
+      const monthStr = jsDate.toLocaleString("default", { month: "short" });
+      const year = jsDate.getFullYear();
+      const key = `${monthStr} ${year}`;
+      allMonths.add(key);
+
+      const absAmount = Math.abs(parsedAmount);
+      if (transactionType === "expense") {
+        categories[category] = (categories[category] || 0) + absAmount;
+        expenseByMonth[key] = (expenseByMonth[key] || 0) + absAmount;
       } else {
-        expenseData.push(amount);
-        categories[category] = (categories[category] || 0) + amount; // Exclude income
+        incomeByMonth[key] = (incomeByMonth[key] || 0) + absAmount;
       }
     });
-  
-    console.log("Processed Data:", categories, months, incomeData, expenseData); // Debugging
-  
-    setCategoryTotals(categories);
-    setMonthlyTotals(months);
-    setIncome(incomeData);
-    setExpenses(expenseData);
-  };
-  
 
-  useEffect(() => {});
+    const sortedMonths = Array.from(allMonths).sort((a, b) => {
+      const [ma, ya] = a.split(" ");
+      const [mb, yb] = b.split(" ");
+      const dateA = new Date(`${ma} 1, ${ya}`);
+      const dateB = new Date(`${mb} 1, ${yb}`);
+      return dateA - dateB;
+    });
+
+    const totalByMonth = {};
+    sortedMonths.forEach((m) => {
+      totalByMonth[m] =
+        (incomeByMonth[m] || 0) + (expenseByMonth[m] || 0);
+    });
+
+    setCategoryTotals(categories);
+    setMonthlyTotals(totalByMonth);
+    setIncome(sortedMonths.map((m) => incomeByMonth[m] || 0));
+    setExpenses(sortedMonths.map((m) => expenseByMonth[m] || 0));
+  };
+
+  const sortedMonthLabels = Object.keys(monthlyTotals).sort((a, b) => {
+    const [ma, ya] = a.split(" ");
+    const [mb, yb] = b.split(" ");
+    return new Date(`${ma} 1, ${ya}`) - new Date(`${mb} 1, ${yb}`);
+  });
+
+  const chartConfig = {
+    backgroundColor: "#121212",
+    backgroundGradientFrom: "#1e1e1e",
+    backgroundGradientTo: "#1e1e1e",
+    decimalPlaces: 0,
+    color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+    labelColor: () => "#E4E4E4",
+    propsForDots: {
+      r: "4",
+      strokeWidth: "2",
+      stroke: "#e74c3c",
+    },
+  };
+
+  const pieColors = ["#e74c3c", "#3498db", "#f1c40f", "#2ecc71", "#9b59b6", "#1abc9c"];
 
   return (
-    <ScrollView style={styles.container}>
-      {/* Spending Breakdown */}
+    <ScrollView
+      style={styles.container}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+    >
+      {/* Pie Chart: Spending Breakdown */}
       <View style={styles.section}>
         <Text style={styles.heading}>Spending Breakdown</Text>
-        <PieChart
-          data={Object.keys(categoryTotals).map((cat, index) => ({
-            name: cat,
-            amount: categoryTotals[cat],
-            color: ["#e74c3c", "#3498db", "#f1c40f", "#2ecc71", "#9b59b6"][
-              index % 5
-            ],
-            legendFontColor: "#E4E4E4",
-            legendFontSize: 12,
-          }))}
-          width={screenWidth - 32}
-          height={220}
-          chartConfig={chartConfig}
-          accessor={"amount"}
-          backgroundColor={"transparent"}
-          paddingLeft={"15"}
-          style={styles.chart}
-        />
+        {Object.keys(categoryTotals).length === 0 ? (
+          <Text style={styles.placeholder}>No data to display</Text>
+        ) : (
+          <PieChart
+            data={Object.entries(categoryTotals).map(([cat, amount], i) => ({
+              name: cat,
+              amount,
+              color: pieColors[i % pieColors.length],
+              legendFontColor: "#E4E4E4",
+              legendFontSize: 12,
+            }))}
+            width={screenWidth - 32}
+            height={220}
+            chartConfig={chartConfig}
+            accessor="amount"
+            backgroundColor="transparent"
+            paddingLeft="15"
+            style={styles.chart}
+          />
+        )}
       </View>
 
-      {/* Income vs Expenses */}
+      {/* Bar Chart: Income vs Expenses */}
       <View style={styles.section}>
         <Text style={styles.heading}>Income vs Expenses</Text>
-        {/* <BarChart
-          data={{
-            labels: Object.keys(monthlyTotals),
-            datasets: [
-              { data: expenses, color: () => "#e74c3c" },
-              { data: income, color: () => "#2ecc71" },
-            ],
-          }}
-          width={screenWidth - 32}
-          height={220}
-          chartConfig={chartConfig}
-          yAxisLabel="₹"
-          style={styles.chart}
-        /> */}
+        {income.length === 0 && expenses.length === 0 ? (
+          <Text style={styles.placeholder}>No data to display</Text>
+        ) : (
+          <BarChart
+            data={{
+              labels: sortedMonthLabels,
+              datasets: [
+                {
+                  data: expenses,
+                  color: () => "#e74c3c",
+                },
+                {
+                  data: income,
+                  color: () => "#2ecc71",
+                },
+              ],
+            }}
+            width={screenWidth - 32}
+            height={240}
+            yAxisLabel="₹"
+            chartConfig={{
+              ...chartConfig,
+              barPercentage: 0.5,
+            }}
+            style={styles.chart}
+            fromZero
+            withInnerLines
+            showBarTops
+          />
+        )}
       </View>
 
-      {/* Monthly Trends */}
+      {/* Line Chart: Monthly Total Trends */}
       <View style={styles.section}>
         <Text style={styles.heading}>Monthly Trends</Text>
-        <LineChart
-          data={{
-            labels: Object.keys(monthlyTotals),
-            datasets: [{ data: Object.values(monthlyTotals), strokeWidth: 2 }],
-          }}
-          width={screenWidth - 32}
-          height={220}
-          chartConfig={chartConfig}
-          bezier
-          style={styles.chart}
-        />
-      </View>
-
-      {/* Category-wise Analysis */}
-      <View style={styles.section}>
-        <Text style={styles.heading}>Category-wise Analysis</Text>
-        {/* <BarChart
-          data={categoryData}
-          width={screenWidth - 32}
-          height={220}
-          chartConfig={{
-            backgroundColor: Colors.dark.card,
-            backgroundGradientFrom: Colors.dark.card,
-            backgroundGradientTo: Colors.dark.card,
-            decimalPlaces: 0,
-            color: (opacity = 1) => `rgba(231, 76, 60, ${opacity})`,
-            labelColor: () => Colors.dark.text,
-          }}
-          yAxisLabel="₹"
-          yAxisSuffix="k"
-          style={styles.chart}
-        /> */}
+        {Object.keys(monthlyTotals).length === 0 ? (
+          <Text style={styles.placeholder}>No data to display</Text>
+        ) : (
+          <LineChart
+            data={{
+              labels: sortedMonthLabels,
+              datasets: [
+                {
+                  data: sortedMonthLabels.map((m) => monthlyTotals[m]),
+                  strokeWidth: 2,
+                },
+              ],
+            }}
+            width={screenWidth - 32}
+            height={220}
+            chartConfig={chartConfig}
+            bezier
+            style={styles.chart}
+          />
+        )}
       </View>
     </ScrollView>
   );
 }
-
-const chartConfig = {
-  backgroundColor: "#121212",
-  backgroundGradientFrom: "#1e1e1e",
-  backgroundGradientTo: "#1e1e1e",
-  decimalPlaces: 0,
-  color: (opacity = 1) => `rgba(231, 76, 60, ${opacity})`,
-  labelColor: () => "#E4E4E4",
-  propsForDots: {
-    r: "4",
-    strokeWidth: "2",
-    stroke: "#e74c3c",
-  },
-};
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#121212",
-    padding: 16,
-  },
-  section: {
-    marginBottom: 24,
-    padding: 16,
-    borderRadius: 8,
-    backgroundColor: "#1e1e1e",
-    shadowColor: "#000",
-    shadowOpacity: 0.3,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-  },
-  heading: {
-    color: "#e74c3c",
-    fontSize: 20,
-    fontWeight: "600",
-    marginBottom: 8,
-  },
-  placeholder: {
-    color: "#aaa",
-    fontSize: 14,
-    fontStyle: "italic",
-  },
-  chart: {
-    marginVertical: 8,
-    borderRadius: 8,
-  },
-  button: {
-    marginTop: 10,
-    padding: 10,
-    borderRadius: 8,
-    backgroundColor: "#e74c3c",
-    alignItems: "center",
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
-  tip: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 4,
-  },
-  bullet: {
-    color: "#e74c3c",
-    marginRight: 8,
-    fontSize: 20,
-  },
-  tipText: {
-    color: "#aaa",
-    fontSize: 14,
-  },
-});

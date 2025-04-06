@@ -31,21 +31,31 @@ export const AuthProvider = ({ children }) => {
 
   // Listen to Firebase auth state changes
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setLoading(true);
+  
       if (user) {
+        console.log("User authenticated:", user.uid);
         setUser(user);
-        AsyncStorage.setItem("authToken", user.uid);
+        await AsyncStorage.setItem("authToken", user.uid);
         router.replace("/");
       } else {
-        setUser(null);
-        router.replace("../auth/login");
+        const token = await AsyncStorage.getItem("authToken");
+        if (!token) {
+          console.log("No auth token, logging out.");
+          // setUser(null);
+          // router.replace("../auth/login");
+        } else {
+          console.log("Token exists in AsyncStorage, NOT logging out.");
+        }
       }
-      setLoading(false)
+  
+      setLoading(false);
     });
-
+  
     return () => unsubscribe();
   }, []);
+  
 
   // Login with Firebase
   const login = async (email, password) => {

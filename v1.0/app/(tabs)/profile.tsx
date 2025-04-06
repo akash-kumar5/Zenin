@@ -43,7 +43,7 @@ export default function Profile() {
           source={{ uri: 'https://i.imgur.com/6VBx3io.png' }} // Placeholder profile picture
           style={styles.profilePic}
         />
-        <Text style={styles.username}>{user.email.split('@')[0]}</Text>
+        <Text style={styles.username}>{user.email? user.email.split('@')[0] : null}</Text>
         <Text style={styles.email}>{user.email}</Text>
       </View>
 
