@@ -1,46 +1,42 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
   TextInput,
   Button,
   Alert,
-  StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Modal,
+  Image,
+  Platform,
 } from "react-native";
-import { Picker } from "@react-native-picker/picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import * as ImagePicker from "expo-image-picker";
 import { collection, addDoc } from "firebase/firestore";
-import { db } from "../auth/firebaseConfig";
-import { useNavigation, useRouter } from "expo-router";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { db, storage } from "../auth/firebaseConfig";
+import { useRouter } from "expo-router";
 import { useAuth } from "../auth/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
+import styles from "@/styles/formStyle";
+import { SafeAreaView } from "react-native-safe-area-context";
+import uuid from "react-native-uuid";
 
 export default function AddExpense() {
-  const navigation = useNavigation();
-  const { user } = useAuth();
-  const [showPaymentOptions, setShowPaymentOptions] = useState(false);
   const router = useRouter();
-
-//   useEffect(() => {
-//     navigation.setOptions({
-//         title: "Add Expense", // Example option
-//         headerStyle: {
-//             backgroundColor: "#ff4d4d",
-//         },
-//         headerTintColor: "#fff",
-//     });
-// }, [navigation]);
+  const { user } = useAuth();
+  const uniqueId = uuid.v4();
 
   const [formData, setFormData] = useState({
     amount: "",
     description: "",
     category: "Food",
     paymentMethod: "cash",
+    otherPaymentMethod: "",
+    otherCategory: "",
     accountId: "",
     date: new Date(),
+    imageUrl: null,
   });
 
   const [loading, setLoading] = useState(false);
@@ -55,15 +51,80 @@ export default function AddExpense() {
     "Healthcare",
     "Other",
   ];
-
   const paymentMethods = ["cash", "credit", "debit", "transfer", "other"];
 
-  // Handle input changes
   const handleChange = (name, value) => {
     setFormData({ ...formData, [name]: value });
   };
 
-  // Handle form submission
+  const pickImageAndUpload = async (user, formData, setFormData) => {
+    try {
+      if (!user || !user.uid) {
+        Alert.alert("Error", "User not authenticated");
+        return;
+      }
+
+      const permissionResult =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert("Permission denied", "Please allow image access");
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 0.2,
+      });
+
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        return;
+      }
+
+      const imageUri = result.assets[0].uri;
+      // console.log(imageUri);
+
+      if (!imageUri.startsWith("file://") && Platform.OS === "android") {
+        Alert.alert("Invalid image", "Image URI is not local");
+        return;
+      }
+
+      // Convert image to blob
+      const response = await fetch(imageUri);
+      // console.log(response);
+
+      const blob = await response.blob();
+      console.log("blob", blob);
+
+      // Unique file name
+      const fileName = `${Date.now()}-${uuid.v4()}.jpg`;
+      const imageRef = ref(storage, `receipts/${user.uid}/${fileName}`);
+      console.log("imageref", imageRef);
+
+      const snap = await Promise.race([
+        uploadBytes(imageRef, blob),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Upload timed out")), 10000)
+        ),
+      ]);
+      console.log("snap", snap);
+      
+      const downloadURL = await getDownloadURL(snap.ref);
+      console.log("downloadurl", downloadURL);
+
+      // Update form data
+      setFormData({ ...formData, imageUrl: downloadURL });
+
+      Alert.alert("Success", "Image uploaded successfully");
+    } catch (error) {
+      console.error("Image pick/upload error:", error);
+      Alert.alert(
+        "Upload Error",
+        error.message || "Something went wrong. Try again."
+      );
+    }
+  };
+
   const handleSubmit = async () => {
     if (!user || !user.uid) {
       Alert.alert("Error", "User not authenticated");
@@ -75,16 +136,32 @@ export default function AddExpense() {
       return;
     }
 
+    if (
+      formData.paymentMethod === "other" &&
+      !formData.otherPaymentMethod.trim()
+    ) {
+      Alert.alert("Error", "Please enter a valid payment method");
+      return;
+    }
+
     setLoading(true);
+
     try {
       await addDoc(collection(db, "users", user.uid, "transactions"), {
-        amount: -Math.abs(parseFloat(formData.amount)), // Ensure negative for expense
+        amount: -Math.abs(parseFloat(formData.amount)),
         description: formData.description,
-        category: formData.category,
-        paymentMethod: formData.paymentMethod,
+        category:
+          formData.category === "Other" && formData.otherCategory
+            ? formData.otherCategory
+            : formData.category,
+        paymentMethod:
+          formData.paymentMethod === "other"
+            ? formData.otherPaymentMethod.trim()
+            : formData.paymentMethod,
         accountId: formData.accountId,
         date: formData.date,
         transactionType: "expense",
+        imageUrl: formData.imageUrl,
         createdAt: new Date(),
       });
 
@@ -99,336 +176,206 @@ export default function AddExpense() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Add New Expense</Text>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Amount</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="00.00"
-          keyboardType="numeric"
-          value={formData.amount}
-          onChangeText={(text) => handleChange("amount", text)}
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#000" }}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.title}>Add New Expense</Text>
+        <View
+          style={{
+            height: 2,
+            backgroundColor: "#ff4d4d",
+            marginBottom: 10,
+            width: 160,
+          }}
         />
-      </View>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Description (optional)</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="What was this expense for?"
-          value={formData.description}
-          onChangeText={(text) => handleChange("description", text)}
-        />
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Category</Text>
-        <View style={styles.bubbleContainer}>
-          {categories.map((cat) => (
-            <TouchableOpacity
-              key={cat}
-              style={[
-                styles.bubble,
-                formData.category === cat && styles.bubbleSelected,
-              ]}
-              onPress={() => handleChange("category", cat)}
-            >
-              <Ionicons
-                name={
-                  cat === "Food"
-                    ? "fast-food"
-                    : cat === "Transportation"
-                    ? "car"
-                    : cat === "Entertainment"
-                    ? "game-controller"
-                    : cat === "Utilities"
-                    ? "flash"
-                    : cat === "Shopping"
-                    ? "cart"
-                    : cat === "Healthcare"
-                    ? "medkit"
-                    : "help"
-                }
-                size={20}
-                color={formData.category === cat ? "#fff" : "#ff4d4d"}
-              />
-              <Text
-                style={[
-                  styles.bubbleText,
-                  formData.category === cat && styles.bubbleTextSelected,
-                ]}
-              >
-                {cat}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        {formData.category === "Other" && (
+        {/* Amount */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Amount</Text>
           <TextInput
-            style={styles.otherInput}
-            placeholder="Enter category"
-            placeholderTextColor="#888"
-            value={formData.otherCategory}
-            onChangeText={(text) => handleChange("otherCategory", text)}
+            style={styles.input}
+            placeholder="00.00"
+            keyboardType="numeric"
+            value={formData.amount}
+            onChangeText={(text) => handleChange("amount", text)}
           />
-        )}
-      </View>
+        </View>
 
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Payment Method</Text>
-        <TouchableOpacity
-          style={styles.dropdown}
-          onPress={() => setShowPaymentOptions(true)}
-        >
-          <Text style={styles.dropdownText}>
-            {formData.paymentMethod.charAt(0).toUpperCase() + formData.paymentMethod.slice(1)}
-          </Text>
-        </TouchableOpacity>
-
-        <Modal visible={showPaymentOptions} transparent animationType="fade">
-          <TouchableOpacity
-            style={styles.modalOverlay}
-            onPress={() => setShowPaymentOptions(false)}
+        {/* Description */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Description (optional)</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="What was this expense for?"
+            value={formData.description}
+            onChangeText={(text) => handleChange("description", text)}
           />
-          <View style={styles.modalContainer}>
+        </View>
+
+        {/* Category */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Category</Text>
+          <View style={styles.bubbleContainer}>
+            {categories.map((cat) => (
+              <TouchableOpacity
+                key={cat}
+                style={[
+                  styles.bubble,
+                  formData.category === cat && styles.bubbleSelected,
+                ]}
+                onPress={() => handleChange("category", cat)}
+              >
+                <Ionicons
+                  name={
+                    cat === "Food"
+                      ? "fast-food"
+                      : cat === "Transportation"
+                      ? "car"
+                      : cat === "Entertainment"
+                      ? "game-controller"
+                      : cat === "Utilities"
+                      ? "flash"
+                      : cat === "Shopping"
+                      ? "cart"
+                      : cat === "Healthcare"
+                      ? "medkit"
+                      : "ellipsis-horizontal-circle-outline"
+                  }
+                  size={20}
+                  color={formData.category === cat ? "#fff" : "#ff4d4d"}
+                />
+                <Text
+                  style={[
+                    styles.bubbleText,
+                    formData.category === cat && styles.bubbleTextSelected,
+                  ]}
+                >
+                  {cat}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          {formData.category === "Other" && (
+            <TextInput
+              style={styles.otherInput}
+              placeholder="Enter category"
+              placeholderTextColor="#888"
+              value={formData.otherCategory}
+              onChangeText={(text) => handleChange("otherCategory", text)}
+            />
+          )}
+        </View>
+
+        {/* Payment Method */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Payment Method</Text>
+          <View style={styles.bubbleContainer}>
             {paymentMethods.map((method) => (
               <TouchableOpacity
                 key={method}
-                style={styles.modalOption}
-                onPress={() => {
-                  handleChange("paymentMethod", method);
-                  setShowPaymentOptions(false);
-                }}
+                style={[
+                  styles.bubble,
+                  formData.paymentMethod === method && styles.bubbleSelected,
+                ]}
+                onPress={() => handleChange("paymentMethod", method)}
               >
-                <Text style={styles.modalOptionText}>
+                <Ionicons
+                  name={
+                    method === "cash"
+                      ? "cash"
+                      : method === "credit"
+                      ? "card"
+                      : method === "debit"
+                      ? "card-outline"
+                      : method === "transfer"
+                      ? "swap-horizontal"
+                      : "ellipsis-horizontal-circle-outline"
+                  }
+                  size={20}
+                  color={formData.paymentMethod === method ? "#fff" : "#ff4d4d"}
+                />
+                <Text
+                  style={[
+                    styles.bubbleText,
+                    formData.paymentMethod === method &&
+                      styles.bubbleTextSelected,
+                  ]}
+                >
                   {method.charAt(0).toUpperCase() + method.slice(1)}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
-        </Modal>
-      </View>
-
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Date</Text>
-        <View style={styles.datePickerContainer}>
-          <Text style={styles.dateText}>{formData.date.toLocaleDateString()}</Text>
-          <Button
-            title="Select Date"
-            onPress={() => setShowDatePicker(true)}
-            color="#ff4d4d"
-          />
+          {formData.paymentMethod === "other" && (
+            <TextInput
+              style={styles.otherInput}
+              placeholder="Enter payment method"
+              placeholderTextColor="#888"
+              value={formData.otherPaymentMethod}
+              onChangeText={(text) => handleChange("otherPaymentMethod", text)}
+            />
+          )}
         </View>
 
-        {showDatePicker && (
-          <DateTimePicker
-            value={formData.date}
-            mode="date"
-            display="calendar"
-            onChange={(event, selectedDate) => {
-              setShowDatePicker(false);
-              if (event.type !== "dismissed") {
-                handleChange("date", selectedDate || formData.date);
-              }
-            }}
-          />
-        )}
-      </View>
+        {/* Date Picker */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Date</Text>
+          <TouchableOpacity
+            onPress={() => setShowDatePicker(true)}
+            style={styles.dateButton}
+          >
+            <Text style={styles.dateText}>
+              {formData.date.toLocaleDateString()}
+            </Text>
+          </TouchableOpacity>
+          {showDatePicker && (
+            <DateTimePicker
+              value={formData.date}
+              mode="date"
+              display="default"
+              onChange={(event, selectedDate) => {
+                setShowDatePicker(false);
+                if (event.type !== "dismissed") {
+                  handleChange("date", selectedDate || formData.date);
+                }
+              }}
+            />
+          )}
+        </View>
 
-      <View style={styles.buttonContainer}>
-        <Button
-          title={loading ? "Adding..." : "Add Expense"}
-          onPress={handleSubmit}
-          disabled={loading}
-          color="#d32f2f"
-        />
-      </View>
-    </ScrollView>
+        {/* Image Picker */}
+        {/* <View style={styles.inputGroup}>
+          <Button
+            title="Attach Image"
+            onPress={() => pickImageAndUpload(user, formData, setFormData)}
+            color="#d32f2f"
+          />
+          {formData.imageUri && (
+            <Image
+              source={{ uri: formData.imageUri }}
+              style={{
+                width: "100%",
+                height: 200,
+                marginTop: 10,
+                borderRadius: 8,
+              }}
+              resizeMode="cover"
+            />
+          )}
+        </View> */}
+
+        {/* Submit */}
+        <View style={styles.buttonContainer}>
+          <Button
+            title={loading ? "Adding..." : "Add Expense"}
+            onPress={handleSubmit}
+            disabled={loading}
+            color="#d32f2f"
+          />
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
-
-// Styles
-const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    paddingBottom: 40,
-    backgroundColor: "#000",
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 20,
-    textAlign: "center",
-    color: "#ff4d4d",
-  },
-  inputGroup: {
-    marginBottom: 15,
-  },
-  label: {
-    fontSize: 16,
-    marginBottom: 5,
-    fontWeight: "500",
-    color: "#ff4d4d",
-  },
-  input: {
-    height: 50,
-    borderWidth: 1,
-    borderColor: "#ff4d4d",
-    borderRadius: 8,
-    paddingHorizontal: 15,
-    fontSize: 16,
-    backgroundColor: "#1a1a1a",
-    color: "#fff",
-  },
-  datePickerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderWidth: 1,
-    borderColor: "#ff4d4d",
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    height: 50,
-    backgroundColor: "#1a1a1a",
-  },
-  dateText: {
-    color: "#fff",
-    fontSize: 16,
-  },
-  buttonContainer: {
-    margin: 20,
-    borderRadius: 8,
-  },
-  inputGroup: {
-    marginBottom: 15,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#ff4d4d",
-    marginBottom: 5,
-  },
-  bubbleContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  bubble: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 10,
-    borderWidth: 1,
-    borderColor: "#ff4d4d",
-    borderRadius: 20,
-    backgroundColor: "#1a1a1a",
-    marginBottom: 10,
-  },
-  bubbleSelected: {
-    backgroundColor: "#ff4d4d",
-  },
-  bubbleText: {
-    marginLeft: 5,
-    fontSize: 16,
-    color: "#ff4d4d",
-  },
-  bubbleTextSelected: {
-    color: "#fff",
-  },
-  otherCategory: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#ff4d4d",
-    marginBottom: 10,
-    backgroundColor: "#262626",
-  },
-  otherInput: {
-    marginTop: 10,
-    borderWidth: 1,
-    borderColor: "#ff4d4d",
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    fontSize: 16,
-    backgroundColor: "#1a1a1a",
-    color: "#fff",
-  },
-  paymentMethodContainer: {
-    padding: 10,
-    backgroundColor: "#1a1a1a",
-    borderWidth: 1,
-    borderColor: "#ff4d4d",
-    borderRadius: 10,
-  },
-  paymentOption: {
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderBottomWidth: 1,
-    borderColor: "#ff4d4d",
-  },
-  paymentOptionText: {
-    fontSize: 16,
-    color: "#ff4d4d",
-  },
-  paymentOptionSelected: {
-    backgroundColor: "#ff4d4d",
-  },
-  paymentOptionTextSelected: {
-    color: "#fff",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.8)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContainer: {
-    backgroundColor: "#1a1a1a",
-    padding: 20,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#ff4d4d",
-    width: "80%",
-  },
-  closeModalButton: {
-    marginTop: 10,
-    backgroundColor: "#ff4d4d",
-    paddingVertical: 10,
-    borderRadius: 5,
-    alignItems: "center",
-  },
-  closeModalText: {
-    color: "#fff",
-    fontSize: 16,
-  },
-  dropdown: {
-    borderWidth: 1,
-    borderColor: "#ff4d4d",
-    padding: 10,
-    borderRadius: 8,
-    backgroundColor: "#1a1a1a",
-    marginTop: 8,
-
-  },
-  dropdownText: {
-    fontSize: 16,
-    color: "#fff",
-  },
-  modalOption: {
-    paddingVertical: 9,
-    paddingHorizontal: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ff4d4d",
-  },
-  modalOptionText: {
-    fontSize: 16,
-    color: "#fff",
-  },
-});

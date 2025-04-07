@@ -30,11 +30,13 @@ const TransactionsScreen = () => {
   const handlePress = (transaction) => {
     router.push({
       pathname: "/screens/transactionDetails",
-      params: { transaction: JSON.stringify(transaction) },
+      params: { id : transaction.id },
     });
   };
 
   useEffect(() => {
+    console.log(transactions);
+    
     if (!user) return;
     const unsubscribe = onSnapshot(
       collection(db, `users/${user.uid}/transactions`),

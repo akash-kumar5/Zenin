@@ -8,7 +8,7 @@ const transactionStyle = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.5)", // Dark overlay for better focus
   },
   modalContent: {
-    backgroundColor: "white",
+    backgroundColor: "#1e1e1e",
     width: "80%",
     padding: 20,
     borderRadius: 10,

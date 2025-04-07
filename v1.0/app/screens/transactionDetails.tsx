@@ -10,58 +10,79 @@ import {
   Image,
 } from "react-native";
 import { useLocalSearchParams, useNavigation } from "expo-router";
-import { doc, deleteDoc, updateDoc, Timestamp } from "firebase/firestore";
+import { doc, deleteDoc, updateDoc, getDoc, Timestamp } from "firebase/firestore";
 import { db } from "../auth/firebaseConfig";
 import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../auth/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
-import { useIsFocused } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import styles from "@/styles/transactionDetailStyle";
 
 export default function TransactionDetails() {
-  const { transaction } = useLocalSearchParams(); // Getting transaction details
+  const { id } = useLocalSearchParams(); // Now only passing transaction ID
   const { user } = useAuth();
   const navigation = useNavigation();
 
-  const parsedTransaction = transaction ? JSON.parse(transaction) : {};
-
-  // State variables
+  const [transaction, setTransaction] = useState(null);
   const [isEditPressed, setIsEditPressed] = useState(false);
   const [isDeletePressed, setIsDeletePressed] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-  const [editedAmount, setEditedAmount] = useState(parsedTransaction.amount.toString());
-  const [editedDescription, setEditedDescription] = useState(parsedTransaction.description || "");
-  const [editedDate, setEditedDate] = useState(
-    parsedTransaction.date 
-      ? new Date(parsedTransaction.date.seconds * 1000).toISOString().split("T")[0]
-      : ""
-  );
-  const [selectedImage, setSelectedImage] = useState(parsedTransaction.image || null);
+  const [editedAmount, setEditedAmount] = useState("");
+  const [editedDescription, setEditedDescription] = useState("");
+  const [editedDate, setEditedDate] = useState("");
+  const [selectedImage, setSelectedImage] = useState(null);
+
+  // Fetch transaction on mount
+  useEffect(() => {
+    console.log("t",transaction);
+    const fetchTransaction = async () => {
+      try {
+        const docRef = doc(db, "users", user.uid, "transactions", id);
+        const docSnap = await getDoc(docRef);
+        console.log(docSnap);
+        
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setTransaction({ ...data, id: docSnap.id });
+          setEditedAmount(data.amount.toString());
+          setEditedDescription(data.description || "");
+          setEditedDate(
+            data.date ? new Date(data.date.seconds * 1000).toISOString().split("T")[0] : ""
+          );
+          console.log(data.image);
+          
+          setSelectedImage(data.image || null);
+        } else {
+          Alert.alert("Error", "Transaction not found");
+        }
+      } catch (error) {
+        console.error("Failed to fetch transaction:", error);
+        Alert.alert("Error", "Failed to load transaction.");
+      }
+    };
+
+    if (id && user?.uid) fetchTransaction();
+  }, [id, user]);
 
   const handleSaveEdit = async () => {
-  try {
-    const updateData = {};
+    try {
+      const updateData = {};
+      if (editedAmount) updateData.amount = editedAmount;
+      if (editedDescription) updateData.description = editedDescription;
+      if (editedDate) updateData.date = Timestamp.fromDate(new Date(editedDate));
+      if (selectedImage) updateData.image = selectedImage;
 
-    if (editedAmount) updateData.amount = editedAmount;
-    if (editedDescription) updateData.description = editedDescription;
-    if (editedDate) updateData.date = Timestamp.fromDate(new Date(editedDate));
-    if (selectedImage) updateData.image = selectedImage;
+      await updateDoc(doc(db, "users", user.uid, "transactions", id), updateData);
 
-    await updateDoc(
-      doc(db, "users", user.uid, "transactions", parsedTransaction.id),
-      updateData // Only update non-empty fields
-    );
+      setModalVisible(false);
+      Alert.alert("Success", "Transaction updated.");
+      setTransaction(prev => ({ ...prev, ...updateData }));
+    } catch (error) {
+      console.error("Update failed:", error);
+      Alert.alert("Error", "Could not update transaction.");
+    }
+  };
 
-    setModalVisible(false);
-    Alert.alert("Success", "Transaction updated successfully.");
-  } catch (error) {
-    console.error("Failed to update transaction", error);
-    Alert.alert("Error", "Failed to update transaction.");
-  }
-};
-
-
-  // Function to pick an image
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.All,
@@ -75,29 +96,26 @@ export default function TransactionDetails() {
     }
   };
 
-  // Function to confirm before deleting a transaction
   const confirmDelete = () => {
-    Alert.alert(
-      "Confirm Deletion",
-      "Are you sure you want to delete this transaction?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Delete", style: "destructive", onPress: handleDelete },
-      ]
-    );
+    Alert.alert("Confirm Deletion", "Delete this transaction?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Delete", style: "destructive", onPress: handleDelete },
+    ]);
   };
 
-  // Function to delete the transaction
   const handleDelete = async () => {
     try {
-      const transactionRef = doc(db, "users", user.uid, "transactions", parsedTransaction.id);
-      await deleteDoc(transactionRef);
-      Alert.alert("Success", "Transaction deleted successfully.");
+      await deleteDoc(doc(db, "users", user.uid, "transactions", id));
+      Alert.alert("Success", "Transaction deleted.");
       navigation.goBack();
     } catch (error) {
-      Alert.alert("Error", "Failed to delete transaction.");
+      console.error("Delete failed:", error);
+      Alert.alert("Error", "Could not delete transaction.");
     }
   };
+
+  if (!transaction) return null; // or a loading indicator
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -105,25 +123,36 @@ export default function TransactionDetails() {
       <View style={styles.elevatedCard}>
         <View style={styles.detailRow}>
           <Text style={styles.label}>Category:</Text>
-          <Text style={styles.value}>{parsedTransaction.category}</Text>
+          <Text style={styles.value}>{transaction.category}</Text>
         </View>
         <View style={styles.detailRow}>
           <Text style={styles.label}>Amount:</Text>
-          <Text style={styles.value}>{parsedTransaction.amount}</Text>
+          <Text style={styles.value}>{transaction.amount}</Text>
         </View>
         <View style={styles.detailRow}>
           <Text style={styles.label}>Description:</Text>
-          <Text style={styles.value}>{parsedTransaction.description || "No description"}</Text>
+          <Text style={styles.value}>{transaction.description || "No description"}</Text>
         </View>
         <View style={styles.detailRow}>
           <Text style={styles.label}>Date:</Text>
           <Text style={styles.value}>
-            {new Date(parsedTransaction.date.seconds * 1000).toLocaleString()}
+            {new Date(transaction.date.seconds * 1000).toLocaleString()}
           </Text>
         </View>
-        {parsedTransaction?.image ? (
-          <Image source={{ uri: parsedTransaction.image }} style={styles.transactionImage} />
-        ):null}
+
+        {transaction.image && (
+          <Image
+            source={{ uri: transaction.image }}
+            style={{
+              width: "100%",
+              height: 200,
+              marginTop: 10,
+              borderRadius: 12,
+            }}
+            resizeMode="cover"
+          />
+        )}
+
         <View style={styles.actions}>
           <TouchableOpacity
             style={[styles.button, isEditPressed && styles.buttonPressed]}
@@ -170,21 +199,20 @@ export default function TransactionDetails() {
             />
             <TouchableOpacity style={styles.imageButton} onPress={pickImage}>
               <View style={styles.imgBox}>
-              <Ionicons name="file-tray-full-outline" size={18} color="#ff4d4d"/>
-              <Text style={styles.buttonText}>
-                Attach Image</Text>
+                <Ionicons name="file-tray-full-outline" size={18} color="#ff4d4d" />
+                <Text style={styles.buttonText}>Attach Image</Text>
               </View>
             </TouchableOpacity>
             {selectedImage && (
               <Image source={{ uri: selectedImage }} style={styles.transactionImage} />
             )}
             <View style={styles.optionBtn}>
-            <TouchableOpacity style={styles.button} onPress={() => setModalVisible(false)}>
-              <Text style={styles.buttonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.button} onPress={handleSaveEdit}>
-              <Text style={styles.buttonText}>Save</Text>
-            </TouchableOpacity>
+              <TouchableOpacity style={styles.button} onPress={() => setModalVisible(false)}>
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.button} onPress={handleSaveEdit}>
+                <Text style={styles.buttonText}>Save</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -192,121 +220,3 @@ export default function TransactionDetails() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: "#121212", // Black background
-    
-  },
-  elevatedCard: {
-    backgroundColor: "#1e1e1e",
-    borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 6,
-    marginVertical: 5,
-    padding: 17,
-  },
-  heading: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 20,
-    color: "#ff4d4d", // Red heading
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.7)",
-  },
-  transactionImage: {
-    color:"#fff",
-    width: 100,
-    height: 100,
-    marginTop: 10,
-    alignSelf: "center",
-  },
-  imageButton: {
-    backgroundColor: "#1e1e1e",
-    padding: 10,
-    borderRadius: 5,
-    alignItems: "center",
-    borderWidth:1,
-    borderColor:"#ff4d4d",
-    margin:12
-  },
-  modalContent: {
-    backgroundColor: "#1e1e1e",
-    padding: 20,
-    borderRadius: 10,
-    width: "80%",
-  },
-  modalHeading: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#ff4d4d",
-    marginBottom: 10,
-  },
-
-  detailRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginVertical: 10,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ff4d4d", // Red separator line
-  },
-  label: {
-    fontWeight: "bold",
-    color: "#ff4d4d", // Red labels
-  },
-  value: {
-    fontSize: 16,
-    color: "#fff", // White values
-  },
-  input: {
-    backgroundColor: "#1e1e1e",
-    color: "#fff",
-    padding: 5,
-    borderRadius: 5,
-    width: "50%",
-    borderWidth:1,
-    borderColor: "#ff4d4d",
-    marginVertical:4
-  },
-  actions: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    marginTop: 20,
-  },
-  button: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    backgroundColor: "#1e1e1e",
-
-    borderRadius: 5,
-    borderWidth: 1,
-    borderColor: "#ff4d4d",
-  },
-  buttonText: {
-    color: "#ff4d4d",
-    fontWeight: "bold",
-    marginHorizontal:3
-  },
-  buttonPressed: {
-    backgroundColor: "#ff4d4d",
-  },
-  optionBtn:{
-    flexDirection:"row",
-    justifyContent:'space-between'
-  },
-  imgBox:{
-    flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "center",
-  }
-});

@@ -14,6 +14,9 @@ import { collection, addDoc } from "firebase/firestore";
 import { db } from "../auth/firebaseConfig";
 import { useRouter } from "expo-router";
 import { useAuth } from "../auth/AuthContext";
+import { SafeAreaView } from "react-native-safe-area-context";
+import styles from "@/styles/formStyle";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function AddIncome() {
   const { user } = useAuth();
@@ -23,7 +26,9 @@ export default function AddIncome() {
     amount: "",
     description: "",
     category: "Salary",
+    otherCategory: "",
     paymentMethod: "bank",
+    otherPaymentMethod: "",
     date: new Date(),
   });
 
@@ -41,11 +46,14 @@ export default function AddIncome() {
   const paymentMethods = ["bank", "cash", "cheque", "online", "other"];
 
   const handleChange = (name, value) => {
-    setFormData({ ...formData, [name]: value });
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const handleSubmit = async () => {
-    if (!user || !user.uid) {
+    if (!user?.uid) {
       Alert.alert("Error", "User not authenticated");
       return;
     }
@@ -55,13 +63,23 @@ export default function AddIncome() {
       return;
     }
 
+    const finalCategory =
+      formData.category === "Other" && formData.otherCategory.trim()
+        ? formData.otherCategory.trim()
+        : formData.category;
+
+    const finalPaymentMethod =
+      formData.paymentMethod === "other" && formData.otherPaymentMethod.trim()
+        ? formData.otherPaymentMethod.trim()
+        : formData.paymentMethod;
+
     setLoading(true);
     try {
       await addDoc(collection(db, "users", user.uid, "transactions"), {
         amount: Math.abs(parseFloat(formData.amount)),
         description: formData.description,
-        category: formData.category,
-        paymentMethod: formData.paymentMethod,
+        category: finalCategory,
+        paymentMethod: finalPaymentMethod,
         date: formData.date,
         transactionType: "income",
         createdAt: new Date(),
@@ -77,144 +95,180 @@ export default function AddIncome() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Add New Income</Text>
+    <SafeAreaView>
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.title}>Add New Income</Text>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Amount</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="00.00"
-          keyboardType="numeric"
-          value={formData.amount}
-          onChangeText={(text) => handleChange("amount", text)}
-        />
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Description (optional)</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="What was this expense for?"
-          value={formData.description}
-          onChangeText={(text) => handleChange("description", text)}
-        />
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Category</Text>
-        <View style={styles.bubbleContainer}>
-          {categories.map((cat) => (
-            <TouchableOpacity
-              key={cat}
-              style={[
-                styles.bubble,
-                formData.category === cat && styles.bubbleSelected,
-              ]}
-              onPress={() => handleChange("category", cat)}
-            >
-              <Text style={styles.bubbleText}>{cat}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        {formData.category === "Other" && (
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Enter category"
-                    placeholderTextColor="#888"
-                    value={formData.otherCategory}
-                    onChangeText={(text) => handleChange("otherCategory", text)}
-                  />
-        )}
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Payment Method</Text>
-        <View style={styles.bubbleContainer}>
-          {paymentMethods.map((method) => (
-            <TouchableOpacity
-              key={method}
-              style={[
-                styles.bubble,
-                formData.paymentMethod === method && styles.bubbleSelected,
-              ]}
-              onPress={() => handleChange("paymentMethod", method)}
-            >
-              <Text style={styles.bubbleText}>
-                {method.charAt(0).toUpperCase() + method.slice(1)}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Date</Text>
-        <TouchableOpacity
-          onPress={() => setShowDatePicker(true)}
-          style={styles.dateButton}
-        >
-          <Text style={styles.dateText}>
-            {formData.date.toLocaleDateString()}
-          </Text>
-        </TouchableOpacity>
-        {showDatePicker && (
-          <DateTimePicker
-            value={formData.date}
-            mode="date"
-            display="default"
-            onChange={(event, selectedDate) => {
-              setShowDatePicker(false);
-              if (event.type !== "dismissed") {
-                handleChange("date", selectedDate || formData.date);
-              }
-            }}
+        {/* Amount */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Amount</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="00.00"
+            keyboardType="numeric"
+            value={formData.amount}
+            onChangeText={(text) => handleChange("amount", text)}
           />
-        )}
-      </View>
+        </View>
 
-      <View style={styles.buttonContainer}>
-        <Button
-          title={loading ? "Adding..." : "Add Income"}
-          onPress={handleSubmit}
-          disabled={loading}
-          color="#d32f2f"
-        />
-      </View>
-    </ScrollView>
+        {/* Description */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Description (optional)</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="What was this income for?"
+            value={formData.description}
+            onChangeText={(text) => handleChange("description", text)}
+          />
+        </View>
+
+        {/* Category */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Category</Text>
+          <View style={styles.bubbleContainer}>
+            {categories.map((cat) => (
+              <TouchableOpacity
+                key={cat}
+                style={[
+                  styles.bubble,
+                  formData.category === cat && styles.bubbleSelected,
+                ]}
+                onPress={() => handleChange("category", cat)}
+              >
+                <Ionicons
+                  name={
+                    cat === "Salary"
+                      ? "briefcase-outline"
+                      : cat === "Business"
+                      ? "storefront-outline"
+                      : cat === "Investments"
+                      ? "trending-up-outline"
+                      : cat === "Freelance"
+                      ? "laptop-outline"
+                      : cat === "Gift"
+                      ? "gift-outline"
+                      : "ellipsis-horizontal-circle-outline"
+                  }
+                  size={20}
+                  color={formData.category === cat ? "#fff" : "#ff4d4d"}
+                />
+                <Text
+                  style={[
+                    styles.bubbleText,
+                    formData.category === cat && styles.bubbleTextSelected,
+                  ]}
+                >
+                  {cat === "Other" && formData.otherCategory
+                    ? formData.otherCategory
+                    : cat}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {formData.category === "Other" && (
+            <TextInput
+              style={styles.input}
+              placeholder="Enter category"
+              placeholderTextColor="#888"
+              value={formData.otherCategory}
+              onChangeText={(text) => handleChange("otherCategory", text)}
+            />
+          )}
+        </View>
+
+        {/* Payment Method */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Payment Method</Text>
+          <View style={styles.bubbleContainer}>
+            {paymentMethods.map((method) => (
+              <TouchableOpacity
+                key={method}
+                style={[
+                  styles.bubble,
+                  formData.paymentMethod === method && styles.bubbleSelected,
+                ]}
+                onPress={() => handleChange("paymentMethod", method)}
+              >
+                <Ionicons
+                  name={
+                    method === "bank"
+                      ? "business-outline"
+                      : method === "cash"
+                      ? "cash-outline"
+                      : method === "cheque"
+                      ? "document-text-outline"
+                      : method === "online"
+                      ? "wifi-outline"
+                      : "help-circle-outline"
+                  }
+                  size={20}
+                  color={formData.paymentMethod === method ? "#fff" : "#ff4d4d"}
+                />
+                <Text
+                  style={[
+                    styles.bubbleText,
+                    formData.paymentMethod === method &&
+                      styles.bubbleTextSelected,
+                  ]}
+                >
+                  {method === "other" && formData.otherPaymentMethod
+                    ? formData.otherPaymentMethod
+                    : method.charAt(0).toUpperCase() + method.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {formData.paymentMethod === "other" && (
+            <TextInput
+              style={styles.input}
+              placeholder="Enter payment method"
+              placeholderTextColor="#888"
+              value={formData.otherPaymentMethod}
+              onChangeText={(text) =>
+                handleChange("otherPaymentMethod", text)
+              }
+            />
+          )}
+        </View>
+
+        {/* Date */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Date</Text>
+          <TouchableOpacity
+            onPress={() => setShowDatePicker(true)}
+            style={styles.dateButton}
+          >
+            <Text style={styles.dateText}>
+              {formData.date.toLocaleDateString()}
+            </Text>
+          </TouchableOpacity>
+          {showDatePicker && (
+            <DateTimePicker
+              value={formData.date}
+              mode="date"
+              display="default"
+              onChange={(event, selectedDate) => {
+                setShowDatePicker(false);
+                if (event.type !== "dismissed") {
+                  handleChange("date", selectedDate || formData.date);
+                }
+              }}
+            />
+          )}
+        </View>
+
+        {/* Submit Button */}
+        <View style={styles.buttonContainer}>
+          <Button
+            title={loading ? "Adding..." : "Add Income"}
+            onPress={handleSubmit}
+            disabled={loading}
+            color="#d32f2f"
+          />
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { padding: 20, backgroundColor: "#000" },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    textAlign: "center",
-    color: "#ff4d4d",
-  },
-  inputGroup: { marginBottom: 15 },
-  label: { fontSize: 16, fontWeight: "500", color: "#ff4d4d" },
-  input: {
-    height: 50,
-    borderWidth: 1,
-    borderColor: "#ff4d4d",
-    borderRadius: 8,
-    paddingHorizontal: 15,
-    color: "#fff",
-  },
-  bubbleContainer: { flexDirection: "row", flexWrap: "wrap" },
-  bubble: {
-    padding: 10,
-    margin: 5,
-    borderRadius: 20,
-    backgroundColor: "#1a1a1a",
-    borderColor: "#ff4d4d",
-    borderWidth: 1,
-  },
-  bubbleSelected: { backgroundColor: "#ff4d4d" },
-  bubbleText: { color: "#fff", fontWeight: "500" },
-  dateButton: { padding: 10, backgroundColor: "#1a1a1a", borderRadius: 8 },
-  dateText: { color: "#fff" },
-  buttonContainer: { marginTop: 20 },
-});

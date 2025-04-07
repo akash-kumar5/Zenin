@@ -69,7 +69,7 @@ export default function HomeScreen() {
       {/* Greeting Section */}
       <View style={styles.section}>
         <Text style={styles.greeting}>
-          {getGreeting()}, {"Akash"}!
+          {getGreeting()}, {"Bitch "}!
         </Text>
       </View>
 

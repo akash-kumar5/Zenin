@@ -57,6 +57,18 @@ const styles = StyleSheet.create({
       color: "#aaa",
       fontSize: 14,
     },
+    chartCard: {
+      backgroundColor: "#1A1A1A",
+      borderRadius: 16,
+      padding: 12,
+      marginHorizontal: 12,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
+      elevation: 3,
+    }
+    
   });
 
 export default styles;
