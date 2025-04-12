@@ -14,9 +14,9 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import * as ImagePicker from "expo-image-picker";
 import { collection, addDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage } from "../auth/firebaseConfig";
+import { db, storage } from "@/utils/firebaseConfig";
 import { useRouter } from "expo-router";
-import { useAuth } from "../auth/AuthContext";
+import { useAuth } from "@/services/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import styles from "@/styles/formStyle";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -94,12 +94,10 @@ export default function AddExpense() {
       // console.log(response);
 
       const blob = await response.blob();
-      console.log("blob", blob);
 
       // Unique file name
       const fileName = `${Date.now()}-${uuid.v4()}.jpg`;
       const imageRef = ref(storage, `receipts/${user.uid}/${fileName}`);
-      console.log("imageref", imageRef);
 
       const snap = await Promise.race([
         uploadBytes(imageRef, blob),
@@ -107,10 +105,9 @@ export default function AddExpense() {
           setTimeout(() => reject(new Error("Upload timed out")), 10000)
         ),
       ]);
-      console.log("snap", snap);
+
       
       const downloadURL = await getDownloadURL(snap.ref);
-      console.log("downloadurl", downloadURL);
 
       // Update form data
       setFormData({ ...formData, imageUrl: downloadURL });

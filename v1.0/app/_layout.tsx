@@ -10,9 +10,7 @@ import { Inter_400Regular, Inter_600SemiBold } from "@expo-google-fonts/inter";
 import { StatusBar } from "expo-status-bar";
 import { Stack, Slot, router } from "expo-router";
 import { useColorScheme } from "@/hooks/useColorScheme";
-import { AuthProvider, useAuth } from "./auth/AuthContext";
-import TransactionDetails from "./screens/transactionDetails";
-import TransactionsScreen from "./(tabs)/transactions";
+import { AuthProvider, useAuth } from "@/services/AuthContext";
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -21,43 +19,28 @@ export default function RootLayout() {
     Inter_600SemiBold,
   });
 
-  const [isReady, setIsReady] = useState(false);
+  if (!loaded) return null;
 
   return (
     <AuthProvider>
-      <AppContent colorScheme={colorScheme} loaded={loaded} />
+      <AppContent colorScheme={colorScheme} />
     </AuthProvider>
   );
 }
 
-// Separate Component to access AuthContext
-function AppContent({ colorScheme, loaded }) {
+function AppContent({ colorScheme }) {
   const { user } = useAuth();
-  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    setIsReady(true);
-    if (!user) {
-      router.replace("/auth/login"); // Redirect to login if not authenticated
+    if (user === null) {
+      router.replace("/auth/login");
     }
   }, [user]);
 
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <Stack screenOptions={{ headerShown: false}}> 
-        {user ? (
-          <>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="+not-found" />
-            <Stack.Screen name="/screens/addExpense" />
-            <Stack.Screen name="TransactionScreen" component={TransactionsScreen} />
-            <Stack.Screen name="TransactionDetails" component={TransactionDetails} />
-
-          </>
-        ) : (
-          <Stack.Screen name="auth/login" options={{ headerShown: false }} />
-        )}
-      </Stack>
+      {/* <Stack screenOptions={{ headerShown: false }} /> */}
+      <Slot />
       <StatusBar style="auto" />
     </ThemeProvider>
   );

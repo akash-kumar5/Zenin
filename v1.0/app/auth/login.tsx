@@ -1,25 +1,43 @@
 // app/auth/login.tsx
 import React, { useEffect, useState } from "react";
-import { View, Text, TextInput, Button, Alert, TouchableOpacity, StyleSheet } from "react-native";
-import { useAuth } from "@/app/auth/AuthContext";
+import { View, Text, TextInput, Button, TouchableOpacity, StyleSheet } from "react-native";
+import { useAuth } from "@/services/AuthContext";
 import { useNavigation, useRouter } from "expo-router";
+import { Snackbar } from "react-native-paper";
 
 export default function Login() {
   const navigation = useNavigation();
-  const { login } = useAuth();
+  const { login, biometricLogin } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [snackbarMsg, setSnackbarMsg] = useState("");
   const router = useRouter();
 
   useEffect(() => {
-    navigation.setOptions({ title: "Zenin - Login" }); // Set the title
+    navigation.setOptions({ title: "Zenin - Login" });
   }, []);
 
   const handleLogin = async () => {
     try {
       await login(email, password);
+      router.replace("/")
     } catch (error) {
-      Alert.alert("Login Failed", error.message);
+      setSnackbarMsg(error.message || "Login failed");
+      setSnackbarVisible(true);
+    }
+  };
+
+  const handleBiometricLogin = async () => {
+    try {
+      const success = await biometricLogin();
+      if (!success) {
+        setSnackbarMsg("Biometric login failed or was cancelled.");
+        setSnackbarVisible(true);
+      }
+    } catch (err) {
+      setSnackbarMsg("Biometric error: " + err.message);
+      setSnackbarVisible(true);
     }
   };
 
@@ -45,9 +63,26 @@ export default function Login() {
 
       <Button title="Login" onPress={handleLogin} color="#d32f2f" />
 
+      <TouchableOpacity onPress={handleBiometricLogin}>
+        <Text style={styles.bioLogin}> Login with Fingerprint </Text>
+      </TouchableOpacity>
+
       <TouchableOpacity onPress={() => router.replace("./signup")}>
         <Text style={styles.link}>Create an Account</Text>
       </TouchableOpacity>
+
+      <Snackbar
+        visible={snackbarVisible}
+        onDismiss={() => setSnackbarVisible(false)}
+        duration={3000}
+        action={{
+          label: "OK",
+          onPress: () => setSnackbarVisible(false),
+        }}
+        style={{ backgroundColor: "#d32f2f" }}
+      >
+        {snackbarMsg}
+      </Snackbar>
     </View>
   );
 }
@@ -72,6 +107,13 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 5,
     marginBottom: 15,
+  },
+  bioLogin: {
+    color: "#fff",
+    textAlign: "center",
+    marginTop: 15,
+    fontSize: 16,
+    textDecorationLine: "underline",
   },
   link: {
     color: "#d32f2f",

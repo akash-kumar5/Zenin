@@ -11,9 +11,9 @@ import {
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { collection, addDoc } from "firebase/firestore";
-import { db } from "../auth/firebaseConfig";
+import { db } from "@/utils/firebaseConfig";
 import { useRouter } from "expo-router";
-import { useAuth } from "../auth/AuthContext";
+import { useAuth } from "@/services/AuthContext";
 import { SafeAreaView } from "react-native-safe-area-context";
 import styles from "@/styles/formStyle";
 import { Ionicons } from "@expo/vector-icons";

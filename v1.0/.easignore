@@ -1,0 +1,52 @@
+# node modules & system files
+node_modules/
+android
+.expo/
+.expo-shared/
+npm-debug.log
+yarn-error.log
+package-lock.json
+
+# macOS / Windows
+.DS_Store
+Thumbs.db
+
+# local dev files
+*.log
+.env
+.env.*
+
+# git
+.git
+.gitignore
+
+# Android build junk
+android/.gradle/
+android/.idea/
+android/build/
+android/local.properties
+android/app/build/
+android/.cxx/
+android/gradle/
+android/gradlew
+android/gradlew.bat
+
+# iOS junk (in case you add iOS later)
+ios/
+ios/build/
+
+# Metro bundler cache
+.metro-cache/
+__generated__/
+
+# images, mock data, etc.
+assets/debug/
+assets/temp/
+*.psd
+*.sketch
+
+# VSCode
+.vscode/
+
+# Others
+*.iml

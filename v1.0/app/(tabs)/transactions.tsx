@@ -9,11 +9,11 @@ import {
   Pressable,
 } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
-import { useAuth } from "../auth/AuthContext";
-import { collection, getFirestore, onSnapshot } from "firebase/firestore";
+import { useAuth } from "@/services/AuthContext";
 import { format } from "date-fns";
 import transactionStyle from "@/styles/transactionStyle";
 import { useRouter } from "expo-router";
+import { fetchUserData } from "@/utils/fetchData"; // ✅ added
 
 const TransactionsScreen = () => {
   const [transactions, setTransactions] = useState([]);
@@ -22,57 +22,66 @@ const TransactionsScreen = () => {
   const [activeFilter, setActiveFilter] = useState("All");
   const [sortOption, setSortOption] = useState("dateDesc");
   const [sortModalVisible, setSortModalVisible] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
 
   const { user } = useAuth();
-  const db = getFirestore();
 
   const handlePress = (transaction) => {
     router.push({
       pathname: "/screens/transactionDetails",
-      params: { id : transaction.id },
+      params: { id: transaction.id },
     });
   };
 
-  useEffect(() => {
-    console.log(transactions);
-    
+  const loadData = async () => {
+    setRefreshing(true);
+
     if (!user) return;
-    const unsubscribe = onSnapshot(
-      collection(db, `users/${user.uid}/transactions`),
-      (snapshot) => {
-        const fetchedTransactions = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })).sort((a, b) => b.date.seconds - a.date.seconds);
-        setTransactions(fetchedTransactions);
-        setLoading(false);
-      },
-      (error) => {
-        console.error("Error fetching transactions:", error);
-        setLoading(false);
-      }
-    );
-    return () => unsubscribe();
-  }, [user]);
+
+    try {
+      const { transactions } = await fetchUserData(user.uid);
+      const sorted = transactions.sort(
+        (a, b) => b.date.seconds - a.date.seconds
+      );
+      setTransactions(sorted);
+    } catch (err) {
+      console.error("Error fetching transactions:", err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
+    loadData();
+  }, [user]);
+
+  // Same useEffect for sort
+  useEffect(() => {
     let sorted = [...transactions];
-    if (sortOption === "dateDesc") sorted.sort((a, b) => b.date.seconds - a.date.seconds);
-    else if (sortOption === "dateAsc") sorted.sort((a, b) => a.date.seconds - b.date.seconds);
-    else if (sortOption === "amountDesc") sorted.sort((a, b) => b.amount - a.amount);
-    else if (sortOption === "amountAsc") sorted.sort((a, b) => a.amount - b.amount);
+    if (sortOption === "dateDesc")
+      sorted.sort((a, b) => b.date.seconds - a.date.seconds);
+    else if (sortOption === "dateAsc")
+      sorted.sort((a, b) => a.date.seconds - b.date.seconds);
+    else if (sortOption === "amountDesc")
+      sorted.sort((a, b) => b.amount - a.amount);
+    else if (sortOption === "amountAsc")
+      sorted.sort((a, b) => a.amount - b.amount);
     setFilteredTransactions(sorted);
   }, [sortOption, transactions]);
 
+  // Same useEffect for filter
   useEffect(() => {
     const filterMap = {
       All: () => transactions,
-      Income: () => transactions.filter(t => t.transactionType === "income"),
-      Expenses: () => transactions.filter(t => t.transactionType === "expense"),
+      Income: () => transactions.filter((t) => t.transactionType === "income"),
+      Expenses: () =>
+        transactions.filter((t) => t.transactionType === "expense"),
       "This Month": () =>
         transactions.filter(
-          (t) => new Date(t.date.seconds * 1000).getMonth() === new Date().getMonth()
+          (t) =>
+            new Date(t.date.seconds * 1000).getMonth() === new Date().getMonth()
         ),
     };
     setFilteredTransactions(filterMap[activeFilter]());
@@ -84,8 +93,12 @@ const TransactionsScreen = () => {
   };
 
   const calculateSummary = useCallback(() => {
-    const income = transactions.filter((t) => t.transactionType === "income").reduce((sum, t) => sum + parseFloat(t.amount), 0);
-    const expenses = transactions.filter((t) => t.transactionType === "expense").reduce((sum, t) => sum + parseFloat(t.amount), 0);
+    const income = transactions
+      .filter((t) => t.transactionType === "income")
+      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+    const expenses = transactions
+      .filter((t) => t.transactionType === "expense")
+      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
     return { income, expenses, balance: income + expenses };
   }, [transactions]);
 
@@ -101,12 +114,16 @@ const TransactionsScreen = () => {
         />
         <View style={transactionStyle.transactionDetails}>
           <Text style={transactionStyle.transactionTitle}>{item.category}</Text>
-          <Text style={transactionStyle.transactionDate}>{formatTimestamp(item.date)}</Text>
+          <Text style={transactionStyle.transactionDate}>
+            {formatTimestamp(item.date)}
+          </Text>
         </View>
         <Text
           style={[
             transactionStyle.transactionAmount,
-            { color: item.transactionType === "income" ? "#2ecc71" : "#e74c3c" },
+            {
+              color: item.transactionType === "income" ? "#2ecc71" : "#e74c3c",
+            },
           ]}
         >
           ₹{item.amount}
@@ -140,8 +157,15 @@ const TransactionsScreen = () => {
       >
         <View style={transactionStyle.modalContent}>
           <Text style={transactionStyle.modalTitle}>Sort By</Text>
-          {["Newest First (Default)", "Oldest First", "Highest Amount", "Lowest Amount"].map((label, index) => {
-            const value = ["dateDesc", "dateAsc", "amountDesc", "amountAsc"][index];
+          {[
+            "Newest First (Default)",
+            "Oldest First",
+            "Highest Amount",
+            "Lowest Amount",
+          ].map((label, index) => {
+            const value = ["dateDesc", "dateAsc", "amountDesc", "amountAsc"][
+              index
+            ];
             return (
               <Pressable
                 key={value}
@@ -173,19 +197,34 @@ const TransactionsScreen = () => {
 
   return (
     <View style={transactionStyle.container}>
-      <View style={[transactionStyle.summarySection, transactionStyle.elevatedCard]}>
+      <View
+        style={[transactionStyle.summarySection, transactionStyle.elevatedCard]}
+      >
         <Text style={transactionStyle.heading}>Transaction Summary</Text>
         <View style={transactionStyle.summaryRow}>
           <View style={transactionStyle.summaryBox}>
-            <Text style={[transactionStyle.summaryAmount, { color: "#2ecc71" }]}>+{income.toFixed(2)}</Text>
+            <Text
+              style={[transactionStyle.summaryAmount, { color: "#2ecc71" }]}
+            >
+              +{income.toFixed(2)}
+            </Text>
             <Text style={transactionStyle.summaryLabel}>Income</Text>
           </View>
           <View style={transactionStyle.summaryBox}>
-            <Text style={[transactionStyle.summaryAmount, { color: "#e74c3c" }]}>{expenses.toFixed(2)}</Text>
+            <Text
+              style={[transactionStyle.summaryAmount, { color: "#e74c3c" }]}
+            >
+              {expenses.toFixed(2)}
+            </Text>
             <Text style={transactionStyle.summaryLabel}>Expenses</Text>
           </View>
           <View style={transactionStyle.summaryBox}>
-            <Text style={[transactionStyle.summaryAmount, { color: balance >= 0 ? "#2ecc71" : "#e74c3c" }]}>
+            <Text
+              style={[
+                transactionStyle.summaryAmount,
+                { color: balance >= 0 ? "#2ecc71" : "#e74c3c" },
+              ]}
+            >
               {balance.toFixed(2)}
             </Text>
             <Text style={transactionStyle.summaryLabel}>Balance</Text>
@@ -196,7 +235,8 @@ const TransactionsScreen = () => {
       <View style={[transactionStyle.section, transactionStyle.elevatedCard]}>
         <View style={transactionStyle.header}>
           <Text style={transactionStyle.heading}>
-            All Transactions <MaterialIcons name="history" size={20} color="#e74c3c" />
+            All Transactions{" "}
+            <MaterialIcons name="history" size={20} color="#e74c3c" />
           </Text>
           <TouchableOpacity onPress={() => setSortModalVisible(true)}>
             <MaterialIcons name="sort" size={24} color="#e74c3c" />
@@ -210,7 +250,7 @@ const TransactionsScreen = () => {
           keyExtractor={(item) => item}
           renderItem={renderFilter}
           contentContainerStyle={{ paddingVertical: 8 }}
-          style={{ maxHeight: 47 }} 
+          style={{ maxHeight: 47 }}
         />
 
         <FlatList
@@ -218,10 +258,14 @@ const TransactionsScreen = () => {
           renderItem={renderTransaction}
           keyExtractor={(item) => item.id}
           ListEmptyComponent={
-            <Text style={{ textAlign: "center", marginTop: 20 }}>No transactions found</Text>
+            <Text style={{ textAlign: "center", marginTop: 20 }}>
+              No transactions found
+            </Text>
           }
           style={{ flex: 1 }} // LET IT TAKE SPACE
           showsVerticalScrollIndicator={false}
+          refreshing={refreshing}
+          onRefresh={loadData}
         />
       </View>
       <SortingModal />

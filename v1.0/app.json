@@ -5,15 +5,10 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "splash": {
-      "image": "./assets/images/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#151718"
-    },
     "assetBundlePatterns": ["**/**"],
-    "scheme": "myapp",
+    "scheme": "zenin",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true
     },
@@ -21,7 +16,9 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.akashkumar5.Zenin",
+      "permissions": ["USE_BIOMETRIC", "USE_FINGERPRINT"]
     },
     "web": {
       "bundler": "metro",
@@ -39,10 +36,24 @@
           "backgroundColor": "#ffffff"
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-local-authentication"
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "1dd45843-4625-40db-91c1-07f2098f6401"
+      }
+    },
+    "runtimeVersion": "1.0.0",
+
+    "updates": {
+      "url": "https://u.expo.dev/1dd45843-4625-40db-91c1-07f2098f6401"
     }
   }
 }

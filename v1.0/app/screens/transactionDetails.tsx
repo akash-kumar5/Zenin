@@ -11,9 +11,9 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useNavigation } from "expo-router";
 import { doc, deleteDoc, updateDoc, getDoc, Timestamp } from "firebase/firestore";
-import { db } from "../auth/firebaseConfig";
+import { db } from "@/utils/firebaseConfig";
 import * as ImagePicker from "expo-image-picker";
-import { useAuth } from "../auth/AuthContext";
+import { useAuth } from "@/services/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import styles from "@/styles/transactionDetailStyle";
@@ -34,12 +34,10 @@ export default function TransactionDetails() {
 
   // Fetch transaction on mount
   useEffect(() => {
-    console.log("t",transaction);
     const fetchTransaction = async () => {
       try {
         const docRef = doc(db, "users", user.uid, "transactions", id);
         const docSnap = await getDoc(docRef);
-        console.log(docSnap);
         
         if (docSnap.exists()) {
           const data = docSnap.data();
@@ -49,7 +47,6 @@ export default function TransactionDetails() {
           setEditedDate(
             data.date ? new Date(data.date.seconds * 1000).toISOString().split("T")[0] : ""
           );
-          console.log(data.image);
           
           setSelectedImage(data.image || null);
         } else {

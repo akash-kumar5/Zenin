@@ -1,258 +1,152 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Button,
-  Dimensions,
+  RefreshControl,
+  Pressable,
 } from "react-native";
-import * as Progress from "react-native-progress";
-import { Colors } from "@/constants/Colors";
+import styles from "@/styles/indexStyle";
 import { useRouter } from "expo-router";
+import { useAuth } from "@/services/AuthContext";
+import { fetchUserData } from "@/utils/fetchData";
+import SmartHighlights from "../components/SmartHighlights";
 
 export default function HomeScreen() {
   const router = useRouter();
-  const COLORS = ["#e74c3c", "#3498db", "#f1c40f"];
+  const { user } = useAuth();
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour >= 5 && hour < 12) return "Good Morning";
-    if (hour >= 12 && hour < 17) return "Good Afternoon";
-    if (hour >= 17 && hour < 21) return "Good Evening";
-    return "Good Night";
+  const [transactions, setTransactions] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [balanceData, setBalanceData] = useState({ income: 0, expense: 0, balance: 0 });
+
+  
+
+  useEffect(() => {
+    if (user) loadData();
+  }, [user]);
+
+  const loadData = async () => {
+    setRefreshing(true);
+    try {
+      const { transactions, balanceData } = await fetchUserData(user.uid);
+      const sortedTx = transactions.sort(
+        (a, b) => b.date.seconds - a.date.seconds
+      );
+      setTransactions(sortedTx);
+      setBalanceData(balanceData);
+      
+    } catch (err) {
+      console.error("Error fetching transactions:", err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   };
 
-  const balances = {
-    bank: 12000.5,
-    cash: 800.0,
-    investments: 5000.0,
-  };
-
-  const spendingData = [
-    {
-      name: "Food",
-      amount: 500,
-      color: "#e74c3c",
-      legendFontColor: "#E4E4E4",
-      legendFontSize: 12,
-    },
-    {
-      name: "Rent",
-      amount: 1000,
-      color: "#3498db",
-      legendFontColor: "#E4E4E4",
-      legendFontSize: 12,
-    },
-    {
-      name: "Shopping",
-      amount: 700,
-      color: "#f1c40f",
-      legendFontColor: "#E4E4E4",
-      legendFontSize: 12,
-    },
-  ];
-
-  const goals = [
-    { name: "Save ₹5000", progress: 0.6 },
-    { name: "Invest ₹2000", progress: 0.3 },
-  ];
-
-  const bills = [
-    { name: "Electricity", due: "2025-03-10", status: "Pending" },
-    { name: "Internet", due: "2025-03-15", status: "Paid" },
-  ];
+  const QuickActionButton = ({ title, onPress }) => (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.button,
+        {
+          backgroundColor: pressed ? "#e74c3c" : "transparent",
+          shadowOpacity: pressed ? 0 : 0.1, // subtle shadow only when not pressed
+        },
+      ]}
+    >
+      {({ pressed }) => (
+        <Text style={[styles.text, { color: pressed ? "#fff" : "#e74c3c" }]}>
+          {title}
+        </Text>
+      )}
+    </Pressable>
+  );
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Greeting Section */}
-      <View style={styles.section}>
-        <Text style={styles.greeting}>
-          {getGreeting()}, {"Bitch "}!
-        </Text>
-      </View>
-
+    <ScrollView
+      style={styles.container}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={loadData} />
+      }
+    >
       <View style={styles.balanceCard}>
-        <Text style={styles.cardTitle}>Your Balances</Text>
+        <Text style={styles.cardTitle}>Your Balance</Text>
         <View style={styles.balanceRow}>
-          <Text style={styles.balanceLabel}>Bank:</Text>
-          <Text style={styles.balanceValue}>₹{balances.bank.toFixed(2)}</Text>
+          <Text style={styles.balanceLabel}>Balance</Text>
+          <Text style={[styles.balanceValue, { color: "#27ae60" }]}>
+            ₹{balanceData.balance.toFixed(2)}
+          </Text>
         </View>
         <View style={styles.balanceRow}>
-          <Text style={styles.balanceLabel}>Cash:</Text>
-          <Text style={styles.balanceValue}>₹{balances.cash.toFixed(2)}</Text>
+          <Text style={styles.balanceLabel}>Income</Text>
+          <Text style={[styles.balanceValue, { color: "#27ae60" }]}>
+            ₹{balanceData.income.toFixed(2)}
+          </Text>
         </View>
         <View style={styles.balanceRow}>
-          <Text style={styles.balanceLabel}>Investments:</Text>
-          <Text style={styles.balanceValue}>
-            ₹{balances.investments.toFixed(2)}
+          <Text style={[styles.balanceLabel]}>Expense</Text>
+          <Text style={[styles.balanceValue, { color: "#e74c3c" }]}>
+            ₹{balanceData.expense.toFixed(2)}
           </Text>
         </View>
       </View>
+
+      {/* ====== Placeholder: Smart Insights / Tips ====== */}
+      {/* e.g. "You're spending 15% more on food this week", "Try saving ₹300 more to hit your monthly goal" */}
+      {/* Insert here: future smart AI/tip box component */}
+      <SmartHighlights  transactions={transactions}/>
+
+      {/* ====== Placeholder: Budget Overview (Upcoming) ====== */}
+      {/* e.g. Show goal tracking, bill due progress, budget progress bar */}
+      {/* Insert here: BudgetCard or GoalCard */}
 
       {/* Recent Transactions */}
       <View style={styles.section}>
         <Text style={styles.heading}>Recent Transactions</Text>
-        <View style={styles.transaction}>
-          <Text style={styles.transactionText}>🍕 Food Delivery</Text>
-          <Text style={styles.transactionAmount}>- ₹500.00</Text>
-        </View>
-        <View style={styles.transaction}>
-          <Text style={styles.transactionText}>🛒 Grocery Shopping</Text>
-          <Text style={styles.transactionAmount}>- ₹1200.00</Text>
-        </View>
-        <View style={styles.transaction}>
-          <Text style={styles.transactionText}>💼 Salary</Text>
-          <Text style={[styles.transactionAmount, { color: "#27ae60" }]}>
-            + ₹20000.00
-          </Text>
-        </View>
+        {transactions.length > 0 ? (
+          transactions.slice(0, 3).map((tx, index) => (
+            <View key={index} style={styles.transaction}>
+              <Text style={styles.transactionText}>
+                {tx.description
+                  ? `${tx.category} (${tx.description})`
+                  : `${tx.category}`}
+              </Text>
+              <Text
+                style={[
+                  styles.transactionAmount,
+                  { color: tx.amount > 0 ? "#27ae60" : "#e74c3c" },
+                ]}
+              >
+                {tx.amount > 0 ? "+" : "-"} ₹{Math.abs(tx.amount).toFixed(2)}
+              </Text>
+            </View>
+          ))
+        ) : (
+          <Text style={styles.placeholder}>No transactions yet.</Text>
+        )}
         <TouchableOpacity onPress={() => router.push("/transactions")}>
           <Text style={styles.viewAll}>View All</Text>
         </TouchableOpacity>
-      </View>
-
-      {/* Spending Overview */}
-      <View style={styles.section}>
-  <Text style={styles.heading}>Spending Overview</Text>
-</View>
-
-      {/* Goals & Tips */}
-      <View style={styles.section}>
-        <Text style={styles.heading}>Goals & Tips</Text>
-        {goals?.map((goal, index) => (
-          <View key={index} style={{ marginBottom: 10 }}>
-            <Text style={styles.subHeading}>{goal.name}</Text>
-            <Progress.Bar progress={10} width={200} color="#e74c3c" />
-          </View>
-        ))}
       </View>
 
       {/* Quick Actions */}
       <View style={styles.section}>
         <Text style={styles.heading}>Quick Actions</Text>
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <Button title="Add Income" color="#27ae60" onPress={() => {router.push("/screens/addIncome")}} />
-          <Button title="Add Expense" color="#e74c3c" onPress={() => {router.push("/screens/addExpense")}} />
+          <QuickActionButton
+            title="Add Income"
+            onPress={() => router.push("/screens/addIncome")}
+          />
+          <QuickActionButton
+            title="Add Expense"
+            onPress={() => router.push("/screens/addExpense")}
+          />
         </View>
-      </View>
-
-      {/* Upcoming Bills */}
-      <View style={styles.section}>
-        <Text style={styles.heading}>Upcoming Bills</Text>
-        {bills.map((bill, index) => (
-          <View key={index} style={styles.billRow}>
-            <Text style={styles.subHeading}>
-              {bill.name} - Due: {bill.due}
-            </Text>
-            <Text
-              style={{ color: bill.status === "Paid" ? "#27ae60" : "#e74c3c" }}
-            >
-              {bill.status}
-            </Text>
-          </View>
-        ))}
       </View>
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#121212", // Dark background
-    padding: 16,
-  },
-  greeting: {
-    fontSize: 24,
-    color: Colors.dark.accent,
-    fontWeight: "bold",
-    marginBottom: 10,
-  },
-  balanceCard: {
-    backgroundColor: Colors.dark.card,
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5, // For Android
-  },
-  cardTitle: {
-    fontSize: 18,
-    color: Colors.dark.text,
-    fontWeight: "bold",
-    marginBottom: 10,
-  },
-  balanceRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 5,
-  },
-  balanceLabel: {
-    color: Colors.dark.text,
-    fontSize: 16,
-  },
-  balanceValue: {
-    color: Colors.dark.accent,
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  transaction: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 6,
-    borderBottomWidth: 0.5,
-    borderBottomColor: "#595959",
-  },
-  transactionText: {
-    color: Colors.dark.text,
-    fontSize: 16,
-  },
-  transactionAmount: {
-    color: "#e74c3c", // Red for expense
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  viewAll: {
-    color: "#e74c3c",
-    textAlign: "right",
-    marginTop: 8,
-    fontSize: 14,
-    textDecorationLine: "underline",
-  },
-  billRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 5,
-  },
-  section: {
-    marginBottom: 24,
-    padding: 16,
-    borderRadius: 8,
-    backgroundColor: "#1e1e1e",
-    shadowColor: "#000",
-    shadowOpacity: 0.3,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-  },
-  heading: {
-    color: "#e74c3c", // Red accent for headings
-    fontSize: 20,
-    fontWeight: "600",
-    marginBottom: 8,
-  },
-  subHeading: {
-    color: "#fff",
-    fontSize: 16,
-    marginBottom: 4,
-  },
-  placeholder: {
-    color: "#aaa",
-    fontSize: 14,
-    fontStyle: "italic",
-  },
-});

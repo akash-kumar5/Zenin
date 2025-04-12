@@ -12,9 +12,8 @@ import {
   Switch,
   Alert,
 } from "react-native";
-import { useAuth } from "../auth/AuthContext";
+import { useAuth } from "@/services/AuthContext";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
-// import SignUp from "../auth/Signup";
 
 export default function Profile() {
   const { user,logout } = useAuth();

@@ -1,7 +1,7 @@
 // app/auth/signup.tsx
 import React, { useEffect, useState } from "react";
 import { View, Text, TextInput, Button, Alert, TouchableOpacity, StyleSheet } from "react-native";
-import { useAuth } from "@/app/auth/AuthContext";
+import { useAuth } from "@/services/AuthContext";
 import { useNavigation } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 
@@ -24,8 +24,7 @@ export default function Signup() {
     }
 
     try {
-      const res = await signup(email, password);
-      console.log(res);
+      const res = await signup(email, password);;
     } catch (error) {
       Alert.alert("Signup Failed", error.message);
     }
