@@ -21,7 +21,7 @@ export default function Login() {
   const handleLogin = async () => {
     try {
       await login(email, password);
-      router.replace("/")
+
     } catch (error) {
       setSnackbarMsg(error.message || "Login failed");
       setSnackbarVisible(true);
