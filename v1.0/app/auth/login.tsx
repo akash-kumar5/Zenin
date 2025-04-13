@@ -21,7 +21,7 @@ export default function Login() {
   const handleLogin = async () => {
     try {
       await login(email, password);
-
+      router.replace("/")
     } catch (error) {
       setSnackbarMsg(error.message || "Login failed");
       setSnackbarVisible(true);
@@ -31,6 +31,7 @@ export default function Login() {
   const handleBiometricLogin = async () => {
     try {
       const success = await biometricLogin();
+      router.replace("/")
       if (!success) {
         setSnackbarMsg("Biometric login failed or was cancelled.");
         setSnackbarVisible(true);

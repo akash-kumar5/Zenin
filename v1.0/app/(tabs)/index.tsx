@@ -146,6 +146,11 @@ export default function HomeScreen() {
             onPress={() => router.push("/screens/addExpense")}
           />
         </View>
+        <View>
+          <TouchableOpacity onPress={() => router.push('/screens/textParser')}>
+            <Text>Text Parser Page (testing)</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </ScrollView>
   );

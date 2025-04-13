@@ -9,7 +9,6 @@ import {
 } from "firebase/auth";
 import * as LocalAuthentication from "expo-local-authentication";
 import * as SecureStore from "expo-secure-store";
-import messaging from "firebase/messaging";
 
 const AuthContext = createContext();
 
@@ -28,25 +27,6 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
 
-  // useEffect(() => {
-  //   const handleNotification = async (remoteMessage, uid) => {
-  //     // Add your notification handling logic here
-  //     console.log("Handling notification for user:", uid);
-  //     console.log("Notification message:", remoteMessage);
-  //   };
-
-  //   const unsubscribe = messaging().onMessage(async (remoteMessage) => {
-  //     const uid = auth.currentUser?.uid;
-  //     console.log(uid);
-
-  //     if (uid) {
-  //       await handleNotification(remoteMessage, uid);
-  //     }
-  //   });
-
-  //   return unsubscribe;
-  // }, []);
-
   const login = async (email, password) => {
     try {
       setLoading(true);
@@ -56,7 +36,6 @@ export const AuthProvider = ({ children }) => {
         password
       );
       setUser(userCredential.user);
-      // router.replace('/')
       await SecureStore.setItemAsync("zenin_email", email);
       await SecureStore.setItemAsync("zenin_pass", password);
     } catch (error) {
