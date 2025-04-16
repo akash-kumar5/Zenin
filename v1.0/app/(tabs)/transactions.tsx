@@ -13,7 +13,7 @@ import { useAuth } from "@/services/AuthContext";
 import { format } from "date-fns";
 import transactionStyle from "@/styles/transactionStyle";
 import { useRouter } from "expo-router";
-import { fetchUserData } from "@/utils/fetchData"; // ✅ added
+import { fetchUserData } from "@/utils/fetchData";
 
 const TransactionsScreen = () => {
   const [transactions, setTransactions] = useState([]);
@@ -36,11 +36,10 @@ const TransactionsScreen = () => {
 
   const loadData = async () => {
     setRefreshing(true);
-
     if (!user) return;
-
     try {
       const { transactions } = await fetchUserData(user.uid);
+     
       const sorted = transactions.sort(
         (a, b) => b.date.seconds - a.date.seconds
       );
@@ -57,7 +56,6 @@ const TransactionsScreen = () => {
     loadData();
   }, [user]);
 
-  // Same useEffect for sort
   useEffect(() => {
     let sorted = [...transactions];
     if (sortOption === "dateDesc")
@@ -71,7 +69,6 @@ const TransactionsScreen = () => {
     setFilteredTransactions(sorted);
   }, [sortOption, transactions]);
 
-  // Same useEffect for filter
   useEffect(() => {
     const filterMap = {
       All: () => transactions,
@@ -81,7 +78,8 @@ const TransactionsScreen = () => {
       "This Month": () =>
         transactions.filter(
           (t) =>
-            new Date(t.date.seconds * 1000).getMonth() === new Date().getMonth()
+            new Date(t.date.seconds * 1000).getMonth() ===
+            new Date().getMonth()
         ),
     };
     setFilteredTransactions(filterMap[activeFilter]());
@@ -99,10 +97,10 @@ const TransactionsScreen = () => {
     const expenses = transactions
       .filter((t) => t.transactionType === "expense")
       .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-    return { income, expenses, balance: income + expenses };
+    return { income, expenses };
   }, [transactions]);
 
-  const { income, expenses, balance } = calculateSummary();
+  const { income, expenses } = calculateSummary();
 
   const renderTransaction = ({ item }) => (
     <TouchableOpacity onPress={() => handlePress(item)}>
@@ -122,7 +120,8 @@ const TransactionsScreen = () => {
           style={[
             transactionStyle.transactionAmount,
             {
-              color: item.transactionType === "income" ? "#2ecc71" : "#e74c3c",
+              color:
+                item.transactionType === "income" ? "#2ecc71" : "#e74c3c",
             },
           ]}
         >
@@ -197,77 +196,80 @@ const TransactionsScreen = () => {
 
   return (
     <View style={transactionStyle.container}>
-      <View
-        style={[transactionStyle.summarySection, transactionStyle.elevatedCard]}
-      >
-        <Text style={transactionStyle.heading}>Transaction Summary</Text>
-        <View style={transactionStyle.summaryRow}>
-          <View style={transactionStyle.summaryBox}>
-            <Text
-              style={[transactionStyle.summaryAmount, { color: "#2ecc71" }]}
-            >
-              +{income.toFixed(2)}
-            </Text>
-            <Text style={transactionStyle.summaryLabel}>Income</Text>
-          </View>
-          <View style={transactionStyle.summaryBox}>
-            <Text
-              style={[transactionStyle.summaryAmount, { color: "#e74c3c" }]}
-            >
-              {expenses.toFixed(2)}
-            </Text>
-            <Text style={transactionStyle.summaryLabel}>Expenses</Text>
-          </View>
-          <View style={transactionStyle.summaryBox}>
-            <Text
+      <FlatList
+        data={filteredTransactions}
+        keyExtractor={(item) => item.id}
+        renderItem={renderTransaction}
+        showsVerticalScrollIndicator={false}
+        refreshing={refreshing}
+        onRefresh={loadData}
+        ListHeaderComponent={
+          <>
+            <View
               style={[
-                transactionStyle.summaryAmount,
-                { color: balance >= 0 ? "#2ecc71" : "#e74c3c" },
+                transactionStyle.summarySection,
+                transactionStyle.elevatedCard,
               ]}
             >
-              {balance.toFixed(2)}
-            </Text>
-            <Text style={transactionStyle.summaryLabel}>Balance</Text>
-          </View>
-        </View>
-      </View>
+              <Text style={transactionStyle.heading}>Transaction Summary</Text>
+              <View style={transactionStyle.summaryRow}>
+                <View style={transactionStyle.summaryBox}>
+                  <Text
+                    style={[
+                      transactionStyle.summaryAmount,
+                      { color: "#2ecc71" },
+                    ]}
+                  >
+                    +{income.toFixed(2)}
+                  </Text>
+                  <Text style={transactionStyle.summaryLabel}>Income</Text>
+                </View>
+                <View style={transactionStyle.summaryBox}>
+                  <Text
+                    style={[
+                      transactionStyle.summaryAmount,
+                      { color: "#e74c3c" },
+                    ]}
+                  >
+                    {expenses.toFixed(2)}
+                  </Text>
+                  <Text style={transactionStyle.summaryLabel}>Expenses</Text>
+                </View>
+              </View>
+            </View>
 
-      <View style={[transactionStyle.section, transactionStyle.elevatedCard]}>
-        <View style={transactionStyle.header}>
-          <Text style={transactionStyle.heading}>
-            All Transactions{" "}
-            <MaterialIcons name="history" size={20} color="#e74c3c" />
+            <View
+              style={[transactionStyle.section, transactionStyle.elevatedCard]}
+            >
+              <View style={transactionStyle.header}>
+                <Text style={transactionStyle.heading}>
+                  All Transactions{" "}
+                  <MaterialIcons name="history" size={20} color="#e74c3c" />
+                </Text>
+                <TouchableOpacity onPress={() => setSortModalVisible(true)}>
+                  <MaterialIcons name="sort" size={24} color="#e74c3c" />
+                </TouchableOpacity>
+              </View>
+
+              <FlatList
+                data={["All", "Income", "Expenses", "This Month"]}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(item) => item}
+                renderItem={renderFilter}
+                contentContainerStyle={{ paddingVertical: 8 }}
+                style={{ maxHeight: 47 }}
+              />
+            </View>
+          </>
+        }
+        ListEmptyComponent={
+          <Text style={{ textAlign: "center", marginTop: 20 }}>
+            No transactions found
           </Text>
-          <TouchableOpacity onPress={() => setSortModalVisible(true)}>
-            <MaterialIcons name="sort" size={24} color="#e74c3c" />
-          </TouchableOpacity>
-        </View>
-
-        <FlatList
-          data={["All", "Income", "Expenses", "This Month"]}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          keyExtractor={(item) => item}
-          renderItem={renderFilter}
-          contentContainerStyle={{ paddingVertical: 8 }}
-          style={{ maxHeight: 47 }}
-        />
-
-        <FlatList
-          data={filteredTransactions}
-          renderItem={renderTransaction}
-          keyExtractor={(item) => item.id}
-          ListEmptyComponent={
-            <Text style={{ textAlign: "center", marginTop: 20 }}>
-              No transactions found
-            </Text>
-          }
-          style={{ flex: 1 }} // LET IT TAKE SPACE
-          showsVerticalScrollIndicator={false}
-          refreshing={refreshing}
-          onRefresh={loadData}
-        />
-      </View>
+        }
+        contentContainerStyle={{ paddingBottom: 40 }}
+      />
       <SortingModal />
     </View>
   );

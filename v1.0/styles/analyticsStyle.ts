@@ -1,6 +1,5 @@
 import { StyleSheet } from "react-native";
 
-
 const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -29,9 +28,53 @@ const styles = StyleSheet.create({
       fontStyle: "italic",
     },
     chart: {
-      marginVertical: 8,
-      borderRadius: 8,
+      marginVertical: 12,
+      borderRadius: 16,
     },
+    
+    centerLabel: {
+      position: 'absolute',
+      top: 100,
+      left: '50%',
+      transform: [{ translateX: -50 }],
+      alignItems: 'center',
+    },
+    
+    centerAmount: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: '#FFF',
+    },
+    
+    centerText: {
+      fontSize: 12,
+      color: '#AAA',
+    },
+    
+    legendContainer: {
+      marginTop: 12,
+      paddingHorizontal: 16,
+    },
+    
+    legendItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    
+    legendColorBox: {
+      width: 12,
+      height: 12,
+      borderRadius: 4,
+      marginRight: 8,
+    },
+    
+    legendText: {
+      color: '#E4E4E4',
+      fontSize: 13,
+    },
+    
+    
     button: {
       marginTop: 10,
       padding: 10,

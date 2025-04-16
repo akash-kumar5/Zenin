@@ -20,7 +20,7 @@ export default function HomeScreen() {
   const [transactions, setTransactions] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [balanceData, setBalanceData] = useState({ income: 0, expense: 0, balance: 0 });
+  const [balanceData, setBalanceData] = useState({ income: 0, expense: 0 });
 
   
 
@@ -76,12 +76,6 @@ export default function HomeScreen() {
       <View style={styles.balanceCard}>
         <Text style={styles.cardTitle}>Your Balance</Text>
         <View style={styles.balanceRow}>
-          <Text style={styles.balanceLabel}>Balance</Text>
-          <Text style={[styles.balanceValue, { color: "#27ae60" }]}>
-            ₹{balanceData.balance.toFixed(2)}
-          </Text>
-        </View>
-        <View style={styles.balanceRow}>
           <Text style={styles.balanceLabel}>Income</Text>
           <Text style={[styles.balanceValue, { color: "#27ae60" }]}>
             ₹{balanceData.income.toFixed(2)}
@@ -118,10 +112,10 @@ export default function HomeScreen() {
               <Text
                 style={[
                   styles.transactionAmount,
-                  { color: tx.amount > 0 ? "#27ae60" : "#e74c3c" },
+                  { color: tx.transactionType=="income"? "#27ae60" : "#e74c3c" },
                 ]}
               >
-                {tx.amount > 0 ? "+" : "-"} ₹{Math.abs(tx.amount).toFixed(2)}
+                {tx.transactionType=="income" ? "+" : "-"} ₹{Math.abs(tx.amount).toFixed(2)}
               </Text>
             </View>
           ))
@@ -146,9 +140,9 @@ export default function HomeScreen() {
             onPress={() => router.push("/screens/addExpense")}
           />
         </View>
-        <View>
+        <View style={{ marginTop: 10, flexDirection: "row", justifyContent: "space-between" }}>
           <TouchableOpacity onPress={() => router.push('/screens/textParser')}>
-            <Text>Text Parser Page (testing)</Text>
+            <Text style={{color:"grey"}}>Text Parser Page (testing)</Text>
           </TouchableOpacity>
         </View>
       </View>

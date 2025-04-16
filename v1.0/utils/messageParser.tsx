@@ -23,8 +23,8 @@ export const parseMessage = (msg: string): ParsedTransaction | null => {
     const type =
       msg.toLowerCase().includes("debited") ||
       msg.toLowerCase().includes("spent")
-        ? "debit"
-        : "credit";
+        ? "expense"
+        : "income";
 
     if (!amountMatch) return null;
 
@@ -146,4 +146,10 @@ export const saveParsedTransaction = async (
   } catch (err) {
     console.error("Firestore save failed:", err);
   }
+};
+
+
+export const handleMessage = (msg: string) => {
+  console.log('Parsing Message:', msg);
+  // Your logic to parse or respond to notification
 };

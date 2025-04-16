@@ -57,7 +57,7 @@ const transactionStyle = StyleSheet.create({
     marginVertical: 5,
   },
   summarySection: {
-    marginBottom: 24,
+    marginBottom: 4,
     padding: 16,
     flexShrink:0
   },
@@ -65,6 +65,7 @@ const transactionStyle = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     marginTop: 12,
+    paddingHorizontal:8
   },
   summaryBox: {
     alignItems: "center",
@@ -79,7 +80,7 @@ const transactionStyle = StyleSheet.create({
     fontSize: 12,
   },
   section: {
-    marginBottom: 24,
+    marginBottom: 4,
     padding: 16,
     flex:1
   },
@@ -87,7 +88,7 @@ const transactionStyle = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 8,
+    marginBottom: 5,
     padding: 2,
   },
   headerIcons: {
@@ -117,6 +118,7 @@ const transactionStyle = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: 10,
+    paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#333",
   },

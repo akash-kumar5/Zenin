@@ -74,8 +74,8 @@ export default function Analytics() {
       );
       setTransactions(sorted);
       processTransactionData(sorted);
-    } catch (error) {
-      console.error("Error fetching transactions:", error);
+    } catch (err) {
+      console.error("Error fetching transactions:", err);
     } finally {
       setLoading(false);
     }
@@ -85,20 +85,18 @@ export default function Analytics() {
     const categorySum = {};
     const incomeByMonth = {};
     const expenseByMonth = {};
-    const monthSet = new Set();
     const monthDateMap = {};
 
     transactions.forEach(({ amount, category, transactionType, date }) => {
       if (!amount || isNaN(amount)) return;
+
       const parsedAmount =
         typeof amount === "string" ? parseFloat(amount) : amount;
       const jsDate = date?.seconds
         ? new Date(date.seconds * 1000)
         : new Date(date);
-      const monthStr = jsDate.toLocaleString("default", { month: "short" });
-      const year = jsDate.getFullYear();
-      const key = `${monthStr} ${year}`;
-      monthSet.add(key);
+      const monthLabel = jsDate.toLocaleString("default", { month: "short" });
+      const key = `${monthLabel} ${jsDate.getFullYear()}`;
       monthDateMap[key] = jsDate;
 
       const absAmount = Math.abs(parsedAmount);
@@ -110,13 +108,13 @@ export default function Analytics() {
       }
     });
 
-    const sortedMonths = Array.from(monthSet).sort(
+    const sortedMonths = Object.keys(monthDateMap).sort(
       (a, b) => new Date(monthDateMap[a]) - new Date(monthDateMap[b])
     );
 
     const incomeArr = sortedMonths.map((m) => incomeByMonth[m] || 0);
     const expenseArr = sortedMonths.map((m) => expenseByMonth[m] || 0);
-    const combinedTotals = sortedMonths.reduce((acc, m, i) => {
+    const totalArr = sortedMonths.reduce((acc, m, i) => {
       acc[m] = incomeArr[i] + expenseArr[i];
       return acc;
     }, {});
@@ -124,15 +122,14 @@ export default function Analytics() {
     setCategoryTotals(categorySum);
     setIncomeData(incomeArr);
     setExpenseData(expenseArr);
-    setMonthlyTotals(combinedTotals);
+    setMonthlyTotals(totalArr);
   };
 
-  const sortedMonthLabels = Object.keys(monthlyTotals).sort((a, b) => {
-    return (
+  const sortedMonthLabels = Object.keys(monthlyTotals).sort(
+    (a, b) =>
       new Date(`${a.split(" ")[0]} 1, ${a.split(" ")[1]}`) -
       new Date(`${b.split(" ")[0]} 1, ${b.split(" ")[1]}`)
-    );
-  });
+  );
 
   if (loading) {
     return (
@@ -163,36 +160,51 @@ export default function Analytics() {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
-      {/* Pie Chart: Spending Breakdown */}
+      {/* Pie Chart - Spending Breakdown */}
       <View style={styles.section}>
         <Text style={styles.heading}>Spending Breakdown</Text>
-        {Object.keys(categoryTotals).length === 0 ? (
+        {totalSpending === 0 ? (
           <Text style={styles.placeholder}>No data to display</Text>
         ) : (
-          <PieChart
-            data={Object.entries(categoryTotals).map(([cat, amount], i) => {
-              const percentage = ((amount / totalSpending) * 100).toFixed(1);
-              return {
-                name: `${cat} (${percentage}%)`,
+          <>
+            <View style={styles.centerLabel}>
+              <Text style={styles.centerAmount}>{`₹${totalSpending}`}</Text>
+              <Text style={styles.centerText}>Total Spent</Text>
+            </View>
+
+            <PieChart
+              data={Object.entries(categoryTotals).map(([cat, amount], i) => ({
+                name: cat,
                 amount,
                 color: pieColors[i % pieColors.length],
-                legendFontColor: "#E4E4E4",
-                legendFontSize: 12,
-              };
-            })}
-            width={chartWidth}
-            height={220}
-            chartConfig={chartConfig}
-            accessor="amount"
-            absolute
-            backgroundColor="transparent"
-            paddingLeft="15"
-            style={styles.chart}
-          />
+              }))}
+              width={chartWidth}
+              height={240}
+              chartConfig={chartConfig}
+              accessor="amount"
+              backgroundColor="transparent"
+              paddingLeft="15"
+              center={[0, 0]}
+              absolute
+              hasLegend={false} // disable default legends
+              style={styles.chart}
+            />
+            <View style={styles.legendContainer}>
+  {Object.entries(categoryTotals).map(([cat, amount], i) => (
+    <View key={cat} style={styles.legendItem}>
+      <View style={[styles.legendColorBox, { backgroundColor: pieColors[i % pieColors.length] }]} />
+      <Text style={styles.legendText}>
+        {cat} - ₹{amount}
+      </Text>
+    </View>
+  ))}
+</View>
+
+          </>
         )}
       </View>
 
-      {/* Bar Chart: Income vs Expenses */}
+      {/* Bar Chart - Income vs Expenses */}
       <View style={styles.section}>
         <Text style={styles.heading}>Income vs Expenses</Text>
         {incomeData.length === 0 && expenseData.length === 0 ? (
@@ -201,9 +213,9 @@ export default function Analytics() {
           </Text>
         ) : (
           <ScrollView
-            style={styles.chartCard}
             horizontal
             showsHorizontalScrollIndicator={false}
+            style={styles.chartCard}
           >
             <VictoryChart
               theme={VictoryTheme.material}
@@ -270,7 +282,7 @@ export default function Analytics() {
         )}
       </View>
 
-      {/* Line Chart: Monthly Trends */}
+      {/* Line Chart - Monthly Trends */}
       <View style={styles.section}>
         <Text style={styles.heading}>Monthly Trends</Text>
         {Object.keys(monthlyTotals).length === 0 ? (
@@ -302,6 +314,8 @@ export default function Analytics() {
           />
         )}
       </View>
+
+      {/* Legends */}
       <View
         style={{ flexDirection: "row", justifyContent: "center", marginTop: 8 }}
       >

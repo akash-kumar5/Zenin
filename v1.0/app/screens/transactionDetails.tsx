@@ -8,8 +8,9 @@ import {
   Alert,
   Modal,
   Image,
+  BackHandler,
 } from "react-native";
-import { useLocalSearchParams, useNavigation } from "expo-router";
+import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { doc, deleteDoc, updateDoc, getDoc, Timestamp } from "firebase/firestore";
 import { db } from "@/utils/firebaseConfig";
 import * as ImagePicker from "expo-image-picker";
@@ -31,8 +32,9 @@ export default function TransactionDetails() {
   const [editedDescription, setEditedDescription] = useState("");
   const [editedDate, setEditedDate] = useState("");
   const [selectedImage, setSelectedImage] = useState(null);
-
   // Fetch transaction on mount
+
+
   useEffect(() => {
     const fetchTransaction = async () => {
       try {

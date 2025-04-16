@@ -1,5 +1,5 @@
 import { db } from "@/utils/firebaseConfig";
-import { getDocs, collection, QuerySnapshot, DocumentData } from "firebase/firestore";
+import { getDocs, collection, getDoc, doc } from "firebase/firestore";
 
 // Define transaction type
 type Transaction = {
@@ -16,13 +16,13 @@ type FirestoreItem = {
 
 export const fetchUserData = async (uid: string) => {
   try {
-    const [transactionsSnap, goalsSnap, billsSnap] = await Promise.all([
+    const [transactionsSnap, infoSnap, billsSnap] = await Promise.all([
       getDocs(collection(db, `users/${uid}/transactions`)),
-      getDocs(collection(db, `users/${uid}/goals`)),
+      getDoc(doc(db, `users/${uid}/personal/info`)), // fix here
       getDocs(collection(db, `users/${uid}/bills`)),
     ]);
 
-    const parseDocs = (snap: QuerySnapshot<DocumentData>): FirestoreItem[] =>
+    const parseDocs = (snap: any): FirestoreItem[] =>
       snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
     const transactions = parseDocs(transactionsSnap) as Transaction[];
@@ -31,32 +31,34 @@ export const fetchUserData = async (uid: string) => {
     let expense = 0;
 
     transactions.forEach((tx) => {
-      if (tx.transactionType === "income") income += tx.amount;
-      else if (tx.transactionType === "expense") expense -= tx.amount;
+      const amt = parseFloat(tx.amount);
+      if (!isNaN(amt)) {
+        if (tx.transactionType === "income") income += amt;
+        else if (tx.transactionType === "expense") expense += amt;
+      }
     });
 
-    const balance = income + expense;
+    const profile = infoSnap.exists() ? { id: infoSnap.id, ...infoSnap.data() } : null;
 
     return {
       balanceData: {
         income,
-        expense: -expense, // so it’s positive in output
-        balance,
+        expense,
       },
       transactions,
-      goals: parseDocs(goalsSnap),
+      profile,
       bills: parseDocs(billsSnap),
     };
+
   } catch (error) {
     console.error("Error fetching user data:", error);
     return {
       balanceData: {
         income: 0,
         expense: 0,
-        balance: 0,
       },
       transactions: [],
-      goals: [],
+      profile: null,
       bills: [],
     };
   }

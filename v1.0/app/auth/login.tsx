@@ -1,46 +1,72 @@
 // app/auth/login.tsx
 import React, { useEffect, useState } from "react";
-import { View, Text, TextInput, Button, TouchableOpacity, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  Button,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+} from "react-native";
 import { useAuth } from "@/services/AuthContext";
 import { useNavigation, useRouter } from "expo-router";
 import { Snackbar } from "react-native-paper";
 
 export default function Login() {
   const navigation = useNavigation();
+  const router = useRouter();
   const { login, biometricLogin } = useAuth();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarMsg, setSnackbarMsg] = useState("");
-  const router = useRouter();
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     navigation.setOptions({ title: "Zenin - Login" });
   }, []);
 
   const handleLogin = async () => {
+    setLoading(true);
     try {
       await login(email, password);
-      router.replace("/")
+      router.replace("/");
     } catch (error) {
       setSnackbarMsg(error.message || "Login failed");
       setSnackbarVisible(true);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleBiometricLogin = async () => {
+    setLoading(true);
     try {
       const success = await biometricLogin();
-      router.replace("/")
       if (!success) {
         setSnackbarMsg("Biometric login failed or was cancelled.");
         setSnackbarVisible(true);
+      } else {
+        router.replace("/");
       }
     } catch (err) {
       setSnackbarMsg("Biometric error: " + err.message);
       setSnackbarVisible(true);
+    } finally {
+      setLoading(false);
     }
   };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={{ color: "#fff", fontSize: 20 }}>Loading...</Text>
+        <ActivityIndicator size="large" color="#d32f2f" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -65,7 +91,7 @@ export default function Login() {
       <Button title="Login" onPress={handleLogin} color="#d32f2f" />
 
       <TouchableOpacity onPress={handleBiometricLogin}>
-        <Text style={styles.bioLogin}> Login with Fingerprint </Text>
+        <Text style={styles.bioLogin}>Login with Fingerprint</Text>
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => router.replace("./signup")}>
@@ -94,6 +120,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#000",
     justifyContent: "center",
     padding: 20,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#000",
   },
   title: {
     fontSize: 32,

@@ -1,20 +1,31 @@
 // app/auth/signup.tsx
 import React, { useEffect, useState } from "react";
-import { View, Text, TextInput, Button, Alert, TouchableOpacity, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  Button,
+  Alert,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+} from "react-native";
 import { useAuth } from "@/services/AuthContext";
 import { useNavigation } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 
 export default function Signup() {
   const { signup } = useAuth();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const navigation = useNavigation();
   const router = useRouter();
 
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
   useEffect(() => {
-    navigation.setOptions({ title: "Zenin - Signup" }); // Set the title
+    navigation.setOptions({ title: "Zenin - Signup" });
   }, []);
 
   const handleSignup = async () => {
@@ -23,12 +34,24 @@ export default function Signup() {
       return;
     }
 
+    setLoading(true);
     try {
-      const res = await signup(email, password);;
+      await signup(email, password);
+      router.replace("/"); // redirect after successful signup
     } catch (error) {
       Alert.alert("Signup Failed", error.message);
+    } finally {
+      setLoading(false);
     }
   };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#d32f2f" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -73,6 +96,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#000",
     justifyContent: "center",
     padding: 20,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#000",
   },
   title: {
     fontSize: 32,
