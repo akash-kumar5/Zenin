@@ -2,21 +2,12 @@ import React, { useState } from 'react'
 import { View, TextInput, Button, Text, ScrollView } from 'react-native'
 import { isFinancialMessage, parseMessage, saveParsedTransaction } from '@/utils/messageParser'
 import { useAuth } from '@/services/AuthContext'
-import PushNotification from 'react-native-push-notification'
 
-export default function TestParser() {
+export default function TextParser() {
   const {user} = useAuth();
   const [msg, setMsg] = useState('')
   const [result, setResult] = useState<any>(null)
 
-
-  const handleTesting = () => {
-    PushNotification.localNotification({
-      title: 'Test Notification',
-      message: 'Hello from local push',
-      data: { message: 'Execute parser logic' }, // this is the payload
-    });
-  }
 
   const handleTest = () => {
 
@@ -54,8 +45,6 @@ export default function TestParser() {
       />
       <Button title="Test Parser" onPress={handleTest} />
       <Text style={{ marginTop: 20 }}>{typeof result === 'string' ? result : JSON.stringify(result, null, 2)}</Text>
-
-      <Button title='testing' onPress={handleTesting} />
     </ScrollView>
   )
 }

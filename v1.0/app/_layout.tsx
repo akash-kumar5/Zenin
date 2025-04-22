@@ -28,12 +28,6 @@ export default function RootLayout() {
 
   AppRegistry.registerComponent('main', () => App);
 
-// Register headless task
-AppRegistry.registerHeadlessTask(
-  'RNPushNotificationListenerService',
-  () => HeadlessNotificationTask
-);
-
   return (
     <AuthProvider>
       <AppContent colorScheme={colorScheme} />

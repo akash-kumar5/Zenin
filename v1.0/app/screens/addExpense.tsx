@@ -23,6 +23,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import uuid from "react-native-uuid";
 
 export default function AddExpense() {
+  console.log("AddExpense screen loaded");
+  
   const router = useRouter();
   const { user } = useAuth();
   const uniqueId = uuid.v4();

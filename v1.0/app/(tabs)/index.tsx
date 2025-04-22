@@ -133,11 +133,11 @@ export default function HomeScreen() {
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
           <QuickActionButton
             title="Add Income"
-            onPress={() => router.push("/screens/addIncome")}
+            onPress={() => router.push('/screens/addIncome')}
           />
           <QuickActionButton
             title="Add Expense"
-            onPress={() => router.push("/screens/addExpense")}
+            onPress={() => router.push('/screens/addExpense')}
           />
         </View>
         <View style={{ marginTop: 10, flexDirection: "row", justifyContent: "space-between" }}>
