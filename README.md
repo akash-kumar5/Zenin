@@ -16,7 +16,7 @@ Built with React Native and Firebase, Zenin helps you take control of your finan
 
 ---
 
-## Screenshots
+## Screenshots (many more in screenshots folder)
 
 <p float="left">
   <img src="https://github.com/user-attachments/assets/aa48473a-170c-403e-a183-e11fee45c64d" width="250" />
@@ -28,10 +28,10 @@ Built with React Native and Firebase, Zenin helps you take control of your finan
 
 ## Technology Stack
 
-- Frontend: React Native (Expo)
+- Frontend: React Native 
 - Backend & Authentication: Firebase Authentication and Firestore
 - Storage: Firebase Storage
-- Key Libraries: React Native Paper, Framer Motion (for web previews)
+- Key Libraries: React Native Paper, 
 
 ---
 
