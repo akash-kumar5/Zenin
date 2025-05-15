@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "868556318611",
+    "project_id": "zenin-e67d9",
+    "storage_bucket": "zenin-e67d9.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:868556318611:android:0de469dfc149d42c08ea66",
+        "android_client_info": {
+          "package_name": "com.zeninv3"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "868556318611-ob8tt5fhc03eesi6dm30sdrd1rnf8mpi.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBvJCwgi9KTcMm1WLF4TXTQqQ3ECqb8ggk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "868556318611-ob8tt5fhc03eesi6dm30sdrd1rnf8mpi.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

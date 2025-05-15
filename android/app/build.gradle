@@ -1,0 +1,67 @@
+plugins {
+    id "com.android.application"
+    id "org.jetbrains.kotlin.android"
+    id "com.facebook.react"
+    id "com.google.gms.google-services"
+}
+
+repositories {
+    google()
+    mavenCentral()
+}
+
+react {
+    autolinkLibrariesWithApp()
+}
+
+def enableProguardInReleaseBuilds = false
+def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
+def hermesEnabled = true
+
+
+android {
+    namespace "com.zeninv3"
+    ndkVersion rootProject.ext.ndkVersion
+    compileSdk rootProject.ext.compileSdkVersion
+    buildToolsVersion rootProject.ext.buildToolsVersion
+
+    defaultConfig {
+        applicationId "com.zeninv3"
+        minSdk rootProject.ext.minSdkVersion
+        targetSdk rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName "1.0"
+    }
+
+    signingConfigs {
+    release {
+        storeFile file('release.keystore')
+        storePassword 'akash123'
+        keyAlias 'zenin-key'
+        keyPassword 'akash123'
+    }
+}
+
+buildTypes {
+    release {
+        signingConfig signingConfigs.release
+        minifyEnabled enableProguardInReleaseBuilds
+        proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+    }
+}
+
+}
+
+dependencies {
+    implementation("com.facebook.react:react-android")
+    implementation platform("com.google.firebase:firebase-bom:33.13.0")
+    implementation("com.google.firebase:firebase-analytics")
+
+    if (hermesEnabled.toBoolean()) {
+        implementation("com.facebook.react:hermes-android")
+    } else {
+        implementation jscFlavor
+    }
+}
+
+apply from: "../../node_modules/react-native-vector-icons/fonts.gradle"
